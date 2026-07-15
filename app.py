@@ -1,34 +1,29 @@
 # -- Configuracion inicial de la aplicacion -- #
 # 01: importar librerias
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash  # para manejo de contraseñas
-from models import db, Usuario, Postulante, Archivo
+from models import db, Usuario, Postulante
 from datetime import datetime
 from flask_mail import Message
-import random, os, uuid
+import random, os
 from config_mail import init_mail, mail
 from functools import wraps
-from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
 
 app = Flask(__name__)
 app.secret_key = os.environ['SECRET_KEY']  # clave secreta desde variables de entorno
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # -- Configuracion de la app -- #
-# 01: base de datos y limites de archivos
+# 01: base de datos
 app.config.update(
     SQLALCHEMY_DATABASE_URI=f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'app.db')}",
-    SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    MAX_CONTENT_LENGTH=5*1024*1024  # limite de 5MB para archivos
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
 
-CARPETA_ARCHIVOS = os.path.join(BASE_DIR, 'uploads')
-EXTENSIONES_PERMITIDAS = {'pdf','png','jpg','jpeg','doc','docx','xlsx','txt','gif','webp'}
 db.init_app(app)
 init_mail(app)
-os.makedirs(CARPETA_ARCHIVOS, exist_ok=True)  # crea carpeta si no existe
 
-# -- Cecoradores para control de acceso -- #
+# -- Decoradores para control de acceso -- #
 # 01: requiere que el usuario este logueado
 def login_required(f):
     @wraps(f)
@@ -37,74 +32,20 @@ def login_required(f):
         return f(*args,**kwargs)
     return decorated
 
-# 02: requiere que el usuario sea admin
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args,**kwargs):
-        usuario=Usuario.query.get(session.get('user_id'))
-        if not usuario or usuario.tipo != 'admin': flash('Acceso no autorizado','error'); return redirect(url_for('login'))
-        return f(*args,**kwargs)
-    return decorated
-
 # -- funciones auxiliares -- #
-# 01: valida que el archivo tenga extension permitida
-def archivo_valido(nombre):
-    return '.' in nombre and nombre.rsplit('.',1)[1].lower() in EXTENSIONES_PERMITIDAS
-
-# 02: valida que el dni tenga 8 digitos
+# 01: valida que el dni tenga 8 digitos
 def validar_dni(dni):
     return len(dni)==8 and dni.isdigit()
 
-# -- manejo de archivos -- #
-# 01: guarda archivos en cloudinary o localmente
-def guardar_archivo(archivo, usuario_id=None):
-    if not archivo or not archivo.filename: return None,'No seleccionaste ningún archivo'
-    if not archivo_valido(archivo.filename): return None,'Tipo de archivo no permitido'
-    
-    # determina si usar cloudinary segun variables de entorno
-    use_cloudinary=all([
-        os.environ.get('CLOUDINARY_CLOUD_NAME'),
-        os.environ.get('CLOUDINARY_API_KEY'),
-        os.environ.get('CLOUDINARY_API_SECRET')
-    ])
-    
-    if use_cloudinary:
-        ext=archivo.filename.rsplit('.',1)[1].lower()
-        resource_type='image' if ext in {'jpg','jpeg','png','gif','webp'} else 'raw'
-        result=upload_to_cloudinary(archivo,folder=f"postulantes/user_{usuario_id or session['user_id']}",resource_type=resource_type)
-        if not result['success']: return None,f"Error Cloudinary: {result['error']}"
-        nuevo_archivo=Archivo(
-            usuario_id=usuario_id or session['user_id'],
-            nombre_original=archivo.filename,
-            nombre_guardado=result['public_id'],
-            extension=result['format'],
-            mime_type=f"application/{result['format']}",
-            ruta=result['secure_url'],  # url de cloudinary
-            tamano=result['bytes']
-        )
-    else:
-        # guardado local en el servidor
-        ext=archivo.filename.rsplit('.',1)[1].lower()
-        nombre_unico=f"{uuid.uuid4()}.{ext}"
-        ruta_local=os.path.join(CARPETA_ARCHIVOS,nombre_unico)
-        archivo.save(ruta_local)
-        if os.path.getsize(ruta_local)>app.config['MAX_CONTENT_LENGTH']:
-            os.remove(ruta_local); return None,'El archivo supera 5MB'
-        nuevo_archivo=Archivo(
-            usuario_id=usuario_id or session['user_id'],
-            nombre_original=archivo.filename,
-            nombre_guardado=nombre_unico,
-            extension=ext,
-            mime_type=archivo.mimetype,
-            ruta=ruta_local,  # ruta local
-            tamano=os.path.getsize(ruta_local)
-        )
-    db.session.add(nuevo_archivo)
-    return nuevo_archivo,None
 
 # -- rutas principales -- #
 @app.route('/')
 def index():
+    return redirect(url_for('login') if 'user_id' in session else url_for('register_view'))
+
+@app.route('/registrarse')
+def register_view():
+    if 'user_id' in session: return redirect(url_for('dashboard'))
     return render_template('register.html')
 
 # -- registro de postulantes -- #
@@ -115,10 +56,10 @@ def postular():
     datos['correo']=datos['correo'].lower()
     
     # validaciones basicas
-    if not all(datos.values()): flash('Todos los campos son obligatorios','error'); return redirect(url_for('index'))
-    if request.form.get('password')!=request.form.get('password_confirm'): flash('Las contraseñas no coinciden','error'); return redirect(url_for('index'))
-    if not validar_dni(datos['dni']): flash('El DNI debe tener 8 dígitos','error'); return redirect(url_for('index'))
-    if Usuario.query.filter_by(email=datos['correo']).first(): flash('El correo ya está registrado','error'); return redirect(url_for('index'))
+    if not all(datos.values()): flash('Todos los campos son obligatorios','error'); return redirect(url_for('register_view'))
+    if request.form.get('password')!=request.form.get('password_confirm'): flash('Las contraseñas no coinciden','error'); return redirect(url_for('register_view'))
+    if not validar_dni(datos['dni']): flash('El DNI debe tener 8 dígitos','error'); return redirect(url_for('register_view'))
+    if Usuario.query.filter_by(email=datos['correo']).first(): flash('El correo ya está registrado','error'); return redirect(url_for('register_view'))
     
     try:
         # crea usuario y postulante
@@ -135,10 +76,6 @@ def postular():
         )
         db.session.add(nuevo_postulante)
         
-        # sube archivo de identidad si existe
-        if archivo:=request.files.get('archivo_de_identidad'):
-            if archivo.filename: guardar_archivo(archivo,nuevo_usuario.id)
-        
         # genera codigo de verificacion y guarda en session
         codigo=str(random.randint(100000,999999))
         session.update({'correo_verificar':datos['correo'],'codigo_verificacion':codigo})
@@ -153,11 +90,12 @@ def postular():
         flash(f'Registro exitoso. Código enviado a {datos["correo"]}','success')
         return redirect(url_for('verify'))
     except:
-        db.session.rollback(); flash('Error en el registro','error'); return redirect(url_for('index'))
+        db.session.rollback(); flash('Error en el registro','error'); return redirect(url_for('register_view'))
 
 # -- autenticacion -- #
 @app.route('/login',methods=['GET','POST'])
 def login():
+    if 'user_id' in session: return redirect(url_for('dashboard'))
     if request.method=='POST':
         usuario=Usuario.query.filter_by(email=request.form.get('correo','').strip().lower()).first()
         if not usuario or not check_password_hash(usuario.password_hash,request.form.get('password','')):
@@ -167,7 +105,7 @@ def login():
         else:
             session.update({'user_id':usuario.id,'email':usuario.email,'tipo_usuario':usuario.tipo})
             flash('Bienvenido!','success')
-            return redirect(url_for('admin_dashboard' if usuario.tipo=='admin' else 'dashboard'))
+            return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 # -- verificacion de correo -- #
@@ -190,125 +128,8 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if session.get('tipo_usuario')=='admin': return redirect(url_for('admin_dashboard'))
     postulante=Postulante.query.filter_by(usuario_id=session['user_id']).first()
-    return render_template('dashboard.html',estado=postulante.estado if postulante else 'pendiente')
-
-@app.route('/perfil')
-@login_required
-def perfil():
-    usuario=Usuario.query.get(session['user_id'])
-    postulante=Postulante.query.filter_by(usuario_id=session['user_id']).first()
-    return render_template('profile.html',usuario={'email':usuario.email,'nombres':postulante.nombres if postulante else '',
-        'apellidos':postulante.apellidos if postulante else '','dni':postulante.dni if postulante else ''})
-
-@app.route('/perfil/editar',methods=['POST'])
-@login_required
-def editar_perfil():
-    dni=request.form.get('dni','').strip()
-    if not validar_dni(dni): flash('El DNI debe tener 8 dígitos','error'); return redirect(url_for('perfil'))
-    postulante=Postulante.query.filter_by(usuario_id=session['user_id']).first()
-    if postulante:
-        postulante.nombres=request.form.get('nombres','').strip()
-        postulante.apellidos=request.form.get('apellidos','').strip()
-        postulante.dni=dni
-        db.session.commit(); flash('Perfil actualizado','success')
-    return redirect(url_for('perfil'))
-
-# -- manejo de archivos usuarios -- #
-@app.route('/mis_archivos')
-@login_required
-def mis_archivos():
-    return render_template('files.html',archivos=Archivo.query.filter_by(usuario_id=session['user_id']).order_by(Archivo.fecha_subida.desc()).all())
-
-@app.route('/subir_archivo',methods=['POST'])
-@login_required
-def subir_archivo():
-    archivo,error=guardar_archivo(request.files.get('archivo'))
-    if error: flash(error,'error')
-    else: db.session.commit(); flash('Archivo subido correctamente','success')
-    return redirect(url_for('mis_archivos'))
-
-@app.route('/archivo/<int:file_id>')
-@login_required
-def descargar_archivo(file_id):
-    archivo=Archivo.query.filter_by(id=file_id,usuario_id=session['user_id']).first_or_404()
-    if archivo.ruta.startswith('https://res.cloudinary.com'): return redirect(archivo.ruta)  # cloudinary
-    return send_file(archivo.ruta,as_attachment=True,download_name=archivo.nombre_original)  # local
-
-@app.route('/archivo/<int:file_id>/eliminar',methods=['POST'])
-@login_required
-def eliminar_archivo(file_id):
-    archivo=Archivo.query.filter_by(id=file_id,usuario_id=session['user_id']).first()
-    if archivo:
-        try:
-            if archivo.ruta.startswith('https://res.cloudinary.com'):
-                parts=archivo.ruta.split('/upload/')
-                if len(parts)>1:
-                    public_id=parts[1].split('/')[-1].split('.')[0]
-                    delete_from_cloudinary(public_id)  # elimina de cloudinary
-            elif os.path.exists(archivo.ruta): os.remove(archivo.ruta)  # elimina local
-            
-            db.session.delete(archivo); db.session.commit(); flash('Archivo eliminado','success')
-        except Exception as e:
-            db.session.rollback(); flash(f'Error al eliminar: {str(e)}','error')
-    return redirect(url_for('mis_archivos'))
-
-# -- area de administracion -- #
-@app.route('/admin/dashboard')
-@admin_required
-def admin_dashboard():
-    return render_template('admin_dashboard.html',
-        total_usuarios=Usuario.query.filter_by(tipo='postulante').count(),
-        total_archivos=Archivo.query.count(),
-        postulantes_pendientes=Postulante.query.filter_by(estado='pendiente').count())
-
-@app.route('/admin/usuarios')
-@admin_required
-def admin_usuarios():
-    return render_template('admin_usuarios.html',postulantes=Postulante.query.join(Usuario).filter(Usuario.tipo=='postulante').all())
-
-@app.route('/admin/cambiar_estado/<int:postulante_id>',methods=['POST'])
-@admin_required
-def cambiar_estado_postulante(postulante_id):
-    postulante=Postulante.query.get_or_404(postulante_id)
-    if (estado:=request.form.get('estado')) in ['pendiente','aprobado','rechazado']:
-        postulante.estado=estado; db.session.commit(); flash(f'Estado cambiado a {estado}','success')
-    return redirect(url_for('admin_usuarios'))
-
-@app.route('/admin/archivos')
-@admin_required
-def admin_archivos():
-    return render_template('admin_archivos.html',archivos=Archivo.query.join(Usuario).order_by(Archivo.fecha_subida.desc()).all())
-
-@app.route('/admin/descargar_archivo/<int:file_id>')
-@admin_required
-def admin_descargar_archivo(file_id):
-    archivo = Archivo.query.get_or_404(file_id)
-    if archivo.ruta.startswith('https://res.cloudinary.com'):
-        return redirect(archivo.ruta)  # redirige a cloudinary
-    return send_file(archivo.ruta, as_attachment=True, download_name=archivo.nombre_original)
-
-@app.route('/admin/archivo/<int:file_id>/eliminar', methods=['POST'])
-@admin_required
-def admin_eliminar_archivo(file_id):
-    archivo = Archivo.query.get_or_404(file_id)
-    try:
-        if archivo.ruta.startswith('https://res.cloudinary.com'):
-            parts = archivo.ruta.split('/upload/')
-            if len(parts) > 1:
-                public_id = parts[1].split('/')[-1].split('.')[0]
-                delete_from_cloudinary(public_id)  # elimina de cloudinary
-        elif os.path.exists(archivo.ruta):
-            os.remove(archivo.ruta)  # elimina localmente
-        
-        db.session.delete(archivo)
-        db.session.commit()
-        flash('Archivo eliminado correctamente', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al eliminar archivo: {str(e)}', 'error')
-    return redirect(url_for('admin_archivos'))
+    return render_template('dashboard.html', postulante=postulante)
 
 # -- funciones adicionales -- #
 @app.route('/cambiar-tema', methods=['POST'])
@@ -317,11 +138,6 @@ def cambiar_tema():
     resp = make_response(redirect(request.form.get('next', url_for('index'))))
     resp.set_cookie('modo_claro', 'true' if modo == 'claro' else 'false', max_age=30*24*60*60)  # cookie por 30 dias
     return resp
-
-@app.errorhandler(413)
-def archivo_demasiado_grande(e):
-    flash('El archivo supera el tamaño máximo permitido (5MB)','error')
-    return redirect(request.referrer or url_for('index'))
 
 # -- inicializacion -- #
 with app.app_context(): db.create_all()  # crea tablas si no existen

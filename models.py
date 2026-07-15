@@ -17,8 +17,6 @@ class Usuario(db.Model):
     verificado = db.Column(db.Boolean, default=False)  # si verifico su correo
     # relacion uno a uno con Postulante
     postulante = db.relationship('Postulante', backref='usuario', uselist=False, cascade="all, delete-orphan")
-    # relacion uno a muchos con Archivo
-    archivos = db.relationship('Archivo', backref='usuario', cascade="all, delete-orphan")
 
 # -- modelo Postulante -- #
 # 01: info especifica de los postulantes
@@ -32,17 +30,3 @@ class Postulante(db.Model):
     dni = db.Column(db.String(20))  # documento de identidad
     estado = db.Column(db.String(20), default='pendiente')  # pendiente, aprobado, rechazado
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)  # cuando se registro
-
-# -- modelo Archivo -- #
-# 01: archivos subidos por los usuarios
-class Archivo(db.Model):
-    __tablename__ = 'archivos'
-    id = db.Column(db.Integer, primary_key=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)  # FK a usuario
-    nombre_original = db.Column(db.String(255), nullable=False)  # nombre original del archivo
-    nombre_guardado = db.Column(db.String(255), nullable=False)  # nombre unico en el sistema
-    extension = db.Column(db.String(10), nullable=False)  # extension del archivo
-    mime_type = db.Column(db.String(100), nullable=False)  # tipo MIME
-    ruta = db.Column(db.String(255), nullable=False)  # ruta local o URL cloudinary
-    tamano = db.Column(db.Integer, nullable=False)  # tamaño en bytes
-    fecha_subida = db.Column(db.DateTime, default=datetime.utcnow)  # cuando se subio

@@ -70,15 +70,7 @@
                     <h1>Admisión de postulantes IESTPO</h1>
                     {% block nav %}
                     <nav class="navegacion">
-                        {% if session.tipo_usuario == 'admin' %}
-                        <a class="link link-a" href="{{ url_for('admin_dashboard') }}">Panel Admin</a>
-                        <a class="link link-b" href="{{ url_for('admin_usuarios') }}">Usuarios</a>
-                        <a class="link link-c" href="{{ url_for('admin_archivos') }}">Archivos</a>
-                        {% else %}
                         <a class="link link-d" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        <a class="link link-e" href="{{ url_for('perfil') }}">Mi Perfil</a>
-                        <a class="link link-f" href="{{ url_for('mis_archivos') }}">Mis Archivos</a>
-                        {% endif %}
                         <a class="link link-g" href="{{ url_for('logout') }}">Cerrar Sesión</a>
                     </nav>
                     {% endblock %}
@@ -102,12 +94,7 @@
                         <div class="info-section">
                             <p><strong>Usuario:</strong>
                                 {% if session.user_id %}
-                                {{ session.email }}
-                                {% if session.tipo_usuario == 'admin' %}
-                                (Administrador)
-                                {% else %}
-                                (Postulante)
-                                {% endif %}
+                                {{ session.email }} (Postulante)
                                 {% else %}
                                 No autenticado
                                 {% endif %}
@@ -119,7 +106,6 @@
                     </div>
                 </footer>
             </div>
-            <script src="{{ url_for('static', filename='js/validations.js') }}"></script>
     </body>
 
 </html>

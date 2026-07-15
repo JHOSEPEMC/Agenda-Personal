@@ -1,48 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<div class="user-dashboard">
-    <h2>Dashboard del Usuario</h2>
-    <div class="admin-card">
-        <div class="status-info">
-            <h3>Estado de postulación:</h3>
-            <p class="status-value">
-                {% if estado == 'aprobado' %}
-                <span class="status-badge status-aprobado">{{ estado|title }}</span>
-                {% elif estado == 'rechazado' %}
-                <span class="status-badge status-rechazado">{{ estado|title }}</span>
-                {% elif estado == 'pendiente' %}
-                <span class="status-badge status-pendiente">{{ estado|title }}</span>
-                {% else %}
-                <span class="status-badge status-pendiente">Pendiente</span>
-                {% endif %}
-            </p>
-        </div>
-    </div>
-</div>
-<div class="tarjeta-admin">
-    <div class="acciones-rapidas">
-        <h3>Acciones Rápidas</h3>
-    </div>
-    <div style="padding: 15px;">
-        <div class="grid-acciones">
-            <div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <a href="{{ url_for('perfil') }}" class="enlace-accion">
-                        Mi perfil
-                    </a>
-                    <a href="{{ url_for('mis_archivos') }}" class="enlace-accion">
-                        Mis archivos
-                    </a>
-                </div>
-            </div>
-            <div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <a href="{{ url_for('logout') }}" class="enlace-accion">
-                        Cerrar Sesión
-                    </a>
-                </div>
-            </div>
+<div class="user-dashboard" style="max-width: 600px; margin: 40px auto;">
+    <div class="tarjeta-admin" style="text-align: center; padding: 40px 20px;">
+        <h2 style="color: var(--accent-color); margin-bottom: 20px;">¡Bienvenido, {{ postulante.nombres }} {{ postulante.apellidos }}!</h2>
+        <p style="font-size: 1.1em; margin-bottom: 30px; color: var(--text-secondary);">Has iniciado sesión de manera correcta en el sistema.</p>
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <a href="{{ url_for('logout') }}" class="btn" style="background: var(--accent-color); color: var(--bg-color);">Cerrar Sesión</a>
         </div>
     </div>
 </div>
