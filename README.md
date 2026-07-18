@@ -1,6 +1,6 @@
 # Sistema de Admisión y Gestión de Archivos (Flask)
 
-Este proyecto es una aplicación web desarrollada con **Flask** para gestionar un proceso de admisión de postulantes. Incluye funcionalidades completas de autenticación, roles de usuario (Administrador y Postulante), subida de archivos (local y Cloudinary), y paneles de administración.
+Este proyecto es una aplicación web desarrollada con **Flask** para la realizacion de una agenda personal con Inicio de sesión e interanccion personal.
 
 ## Características Principales
 
@@ -135,4 +135,4 @@ flask-login-system/
 *   JHOSEPEMC - *Base de datos *
 
 ---
-© 2025 Sistema de Admisión IESTPO
+© 2026 Sistema de Admisión IESTPO
