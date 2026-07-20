@@ -37,7 +37,6 @@ def login_required(f):
 def validar_dni(dni):
     return len(dni)==8 and dni.isdigit()
 
-
 # -- rutas principales -- #
 @app.route('/')
 def index():
@@ -48,7 +47,7 @@ def register_view():
     if 'user_id' in session: return redirect(url_for('dashboard'))
     return render_template('register.html')
 
-# -- registro de postulantes -- #
+# -- registro de usuarios ya registrados -- #
 # 01: procesa el formulario de registro
 @app.route('/postular',methods=['POST'])
 def postular():
@@ -125,11 +124,11 @@ def logout():
     session.clear(); flash('Sesión cerrada','success'); return redirect(url_for('login'))
 
 # -- area de usuarios -- #
-@app.route('/dashboard')
+@app.route('/agenda')
 @login_required
 def dashboard():
     postulante=Postulante.query.filter_by(usuario_id=session['user_id']).first()
-    return render_template('dashboard.html', postulante=postulante)
+    return render_template('agenda.html', postulante=postulante)
 
 # -- funciones adicionales -- #
 @app.route('/cambiar-tema', methods=['POST'])
@@ -143,4 +142,4 @@ def cambiar_tema():
 with app.app_context(): db.create_all()  # crea tablas si no existen
 if __name__=="__main__":
     port=int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0",port=port)
+    app.run(host="0.0.0.0",port=port, debug=True)

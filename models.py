@@ -3,7 +3,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-db = SQLAlchemy()  # instancia de SQLAlchemy para manejar la bd
+db = SQLAlchemy()  # instancia de SQLAlchemy para manejar la base de datos
 
 # -- modelo Usuario -- #
 # 01: almacena info de usuarios del sistema
