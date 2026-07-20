@@ -1,12 +1,40 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ejemplo</title>
-</head>
-<body>
-    <h1>¡Hola, mundo!</h1>
-    <p>Este es un commit de prueba desde termux (android)</p>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Mi Agenda{% endblock %}
+
+{% block content %}
+<form method="POST" action="" class="columnas" style="align-items: stretch; min-height: calc(100vh - 120px);">
+    <!-- Columna Izquierda: Anotación del día seleccionado -->
+    <div class="columna1" style="justify-content: flex-start; padding: 10px;">
+        <div class="tarjeta-admin" style="width: 100%; margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 400px; height: 100%;">
+            <h2 style="margin-bottom: 15px; color: var(--accent-color);">Anotación del Día</h2>
+            
+            <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 15px;">
+                <label for="anotacion" style="margin-bottom: 8px;">Texto de la anotación:</label>
+                <textarea id="anotacion" name="anotacion" class="form-control" style="flex-grow: 1; min-height: 250px; resize: none; font-family: inherit; font-size: 1.05em; padding: 12px;" placeholder="Escribe aquí las anotaciones para el día seleccionado...">{{ anotacion }}</textarea>
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%;">Guardar Anotación</button>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Calendario por defecto (<input type="date">) -->
+    <div class="columna2" style="justify-content: flex-start; align-items: stretch; padding: 10px;">
+        <div class="tarjeta-admin" style="width: 100%; margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 400px; height: 100%; justify-content: center;">
+            <h2 style="text-align: center; margin-bottom: 20px; color: var(--accent-color);">Seleccionar Fecha</h2>
+            
+            <div class="form-group" style="text-align: center;">
+                <label for="fecha" style="margin-bottom: 12px; display: block;">Fecha de la agenda:</label>
+                <!-- Etiqueta por defecto del calendario -->
+                <input type="date" id="fecha" name="fecha" class="form-control" style="font-size: 1.2em; padding: 12px; text-align: center; max-width: 300px; margin: 0 auto;" value="{{ fecha_seleccionada }}">
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="submit" name="accion" value="cargar" class="btn" style="background: transparent; border: 1px solid var(--accent-color); color: var(--text-color);">Cargar Notas de la Fecha</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+
