@@ -65,7 +65,7 @@ def postular():
         nuevo_usuario=Usuario(email=datos['correo'],password_hash=generate_password_hash(datos['password']),tipo='postulante',verificado=False)
         db.session.add(nuevo_usuario); db.session.flush()
         
-        nuevo_postulante=Postulante(
+        nueva_agenda=Agenda(
             usuario_id=nuevo_usuario.id,
             nombres=datos['nombres'],
             apellidos=datos['apellidos'],
@@ -73,7 +73,7 @@ def postular():
             dni=datos['dni'],
             estado='pendiente'
         )
-        db.session.add(nuevo_postulante)
+        db.session.add(nueva_agenda)
         
         # genera codigo de verificacion y guarda en session
         codigo=str(random.randint(100000,999999))
@@ -127,8 +127,8 @@ def logout():
 @app.route('/agenda')
 @login_required
 def dashboard():
-    postulante=Postulante.query.filter_by(usuario_id=session['user_id']).first()
-    return render_template('agenda.html', postulante=postulante)
+    _agenda=Agenda.query.filter_by(usuario_id=session['user_id']).first()
+    return render_template('agenda.html', _agenda=_agenda)
 
 # -- funciones adicionales -- #
 @app.route('/cambiar-tema', methods=['POST'])
