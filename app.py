@@ -120,8 +120,8 @@ def enviar_email_verificacion(correo, nombre_usuario, codigo):
     try:
         msg = Message("Verifica tu correo", recipients=[correo])
         msg.html = render_template("verify_email.html", 
-                                 nombres=nombre_usuario, 
-                                 codigo=codigo)
+                                    nombres=nombre_usuario, 
+                                    codigo=codigo)
         mail.send(msg)
         app.logger.info(f"Email de verificación enviado a: {correo}")
         return True, ""
@@ -145,6 +145,43 @@ def verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo):
     usuario.verificado = True
     db.session.commit()
     return True, "Correo verificado exitosamente"
+
+# -- Funciones helper para agenda -- #
+def obtener_anotaciones(usuario_id):
+    """Obtiene todas las anotaciones de un usuario ordenadas por fecha descendente"""
+    return Agenda.query.filter_by(usuario_id=usuario_id).order_by(Agenda.fecha.desc()).all()
+
+def obtener_anotacion_por_id(anotacion_id):
+    """Obtiene una anotación por su ID o lanza 404"""
+    return Agenda.query.get_or_404(anotacion_id)
+
+def obtener_anotacion_por_fecha(usuario_id, fecha):
+    """Obtiene una anotación específica por usuario y fecha"""
+    return Agenda.query.filter_by(usuario_id=usuario_id, fecha=fecha).first()
+
+def crear_anotacion(usuario_id, fecha, texto):
+    """Crea una nueva anotación para un usuario"""
+    nueva = Agenda(
+        usuario_id=usuario_id,
+        fecha=fecha,
+        anotacion=texto
+    )
+    db.session.add(nueva)
+    db.session.commit()
+    return nueva
+
+def actualizar_anotacion(anotacion, fecha, texto):
+    """Actualiza una anotación existente"""
+    anotacion.fecha = fecha
+    anotacion.anotacion = texto
+    anotacion.fecha_actualizacion = datetime.utcnow()
+    db.session.commit()
+    return anotacion
+
+def eliminar_anotacion(anotacion):
+    """Elimina una anotación"""
+    db.session.delete(anotacion)
+    db.session.commit()
 
 # -- Decoradores para control de acceso -- #
 def login_required(f):
@@ -396,7 +433,8 @@ def ver_agenda():
         usuario_id = session['user_id']
         app.logger.info(f"Acceso a agenda - Usuario ID: {usuario_id}")
         
-        anotaciones = Agenda.query.filter_by(usuario_id=usuario_id).order_by(Agenda.fecha.desc()).all()
+        # Usar función helper para obtener anotaciones
+        anotaciones = obtener_anotaciones(usuario_id)
         app.logger.info(f"Anotaciones cargadas - Usuario ID: {usuario_id}, Total: {len(anotaciones)}")
         
         return render_template('agenda.html', anotaciones=anotaciones)
@@ -428,22 +466,17 @@ def crear_anotacion():
         try:
             fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
             
-            # Verificar si ya existe anotación para esa fecha
-            existente = Agenda.query.filter_by(usuario_id=usuario_id, fecha=fecha).first()
+            # Verificar si ya existe anotación para esa fecha usando helper
+            existente = obtener_anotacion_por_fecha(usuario_id, fecha)
             if existente:
                 flash('Ya existe una anotación para esta fecha', 'warning')
                 log_seguridad('CREAR_ANOTACION_FALLIDO', f'Anotación duplicada - Usuario: {usuario_id}, Fecha: {fecha}')
                 return redirect(url_for('editar_anotacion', id=existente.id))
             
-            nueva_anotacion = Agenda(
-                usuario_id=usuario_id,
-                fecha=fecha,
-                anotacion=anotacion
-            )
-            db.session.add(nueva_anotacion)
-            db.session.commit()
+            # Crear anotación usando helper
+            crear_anotacion(usuario_id, fecha, anotacion)
             
-            app.logger.info(f"Anotación creada - ID: {nueva_anotacion.id}, Usuario: {usuario_id}, Fecha: {fecha}")
+            app.logger.info(f"Anotación creada - Usuario: {usuario_id}, Fecha: {fecha}")
             log_seguridad('CREAR_ANOTACION', f'Usuario: {usuario_id}, Fecha: {fecha}')
             
             flash('Anotación creada', 'success')
@@ -461,7 +494,8 @@ def crear_anotacion():
 @log_request
 def editar_anotacion(id):
     try:
-        anotacion = Agenda.query.get_or_404(id)
+        # Obtener anotación usando helper
+        anotacion = obtener_anotacion_por_id(id)
         usuario_id = session['user_id']
         
         if anotacion.usuario_id != usuario_id:
@@ -483,10 +517,10 @@ def editar_anotacion(id):
                 return render_template('agenda_editar.html', anotacion=anotacion)
             
             try:
-                anotacion.fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-                anotacion.anotacion = nuevo_texto
-                anotacion.fecha_actualizacion = datetime.utcnow()
-                db.session.commit()
+                fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                
+                # Actualizar usando helper
+                actualizar_anotacion(anotacion, fecha, nuevo_texto)
                 
                 app.logger.info(f"Anotación actualizada - ID: {id}, Usuario: {usuario_id}")
                 log_seguridad('EDITAR_ANOTACION', f'Usuario: {usuario_id}, Anotacion: {id}')
@@ -510,7 +544,8 @@ def editar_anotacion(id):
 @log_request
 def eliminar_anotacion(id):
     try:
-        anotacion = Agenda.query.get_or_404(id)
+        # Obtener anotación usando helper
+        anotacion = obtener_anotacion_por_id(id)
         usuario_id = session['user_id']
         
         if anotacion.usuario_id != usuario_id:
@@ -519,8 +554,8 @@ def eliminar_anotacion(id):
             return redirect(url_for('ver_agenda'))
         
         try:
-            db.session.delete(anotacion)
-            db.session.commit()
+            # Eliminar usando helper
+            eliminar_anotacion(anotacion)
             
             app.logger.info(f"Anotación eliminada - ID: {id}, Usuario: {usuario_id}")
             log_seguridad('ELIMINAR_ANOTACION', f'Usuario: {usuario_id}, Anotacion: {id}')
