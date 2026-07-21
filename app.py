@@ -68,6 +68,19 @@ def registrar():
     if password != password_confirm:
         flash('Las contraseñas no coinciden', 'error')
         return redirect(url_for('register_view'))
+    # validacion de password: la contraseña debe tener almenos 8 caracteres!
+    if len(password) < 8:
+        flash('La contraseña debe tener al menos 8 caracteres', 'error')
+        return redirect(url_for('register_view'))
+    if not any(c.isupper() for c in password):
+        flash('La contraseña debe tener al menos una mayúscula', 'error')
+        return redirect(url_for('register_view'))
+    if not any(c.islower() for c in password):
+        flash('La contraseña debe tener al menos una minúscula', 'error')
+        return redirect(url_for('register_view'))
+    if not any(c.isdigit() for c in password):
+        flash('La contraseña debe tener al menos un número', 'error')
+        return redirect(url_for('register_view'))
     if Usuario.query.filter_by(email=correo).first():
         flash('Este correo ya está registrado', 'error')
         return redirect(url_for('register_view'))
