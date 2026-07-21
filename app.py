@@ -1,26 +1,20 @@
-# 01: Importar librerías
+# -- Configuracion inicial de la aplicacion -- #
+# 01: importar librerias
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Usuario, Agenda
 from datetime import datetime
 from flask_mail import Message
-import random
-import os
+import random, os
 from config_mail import init_mail, mail
 from functools import wraps
 
-# ================================================
-# CREAR LA APLICACIÓN FLASK
-# ================================================
-
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'clave_secreta_por_defecto')
+app.secret_key = os.environ.get('SECRET_KEY', 'clave_por_defecto')
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# ================================================
-# CONFIGURACIÓN DE LA BASE DE DATOS
-# ================================================
-
+# -- Configuracion de la app -- #
+# 01: base de datos
 app.config.update(
     SQLALCHEMY_DATABASE_URI=f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'app.db')}",
     SQLALCHEMY_TRACK_MODIFICATIONS=False
@@ -29,81 +23,59 @@ app.config.update(
 db.init_app(app)
 init_mail(app)
 
-# ================================================
-# DECORADORES PARA CONTROL DE ACCESO
-# ================================================
-
+# -- Decoradores para control de acceso -- #
 def login_required(f):
-    """Decorador: requiere que el usuario esté logueado"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
-            flash('Debes iniciar sesión para acceder a esta página', 'error')
+            flash('Debes iniciar sesion', 'error')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
 
-# ================================================
-# RUTAS PRINCIPALES
-# ================================================
-
+# -- rutas principales -- #
 @app.route('/')
 def index():
-    """Página principal: redirige según estado de sesión"""
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
     return redirect(url_for('login'))
 
-# ================================================
-# REGISTRO DE USUARIOS
-# ================================================
-
+# -- registro de usuarios -- #
 @app.route('/registrarse')
 def register_view():
-    """Muestra el formulario de registro"""
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
     return render_template('register.html')
 
 @app.route('/registrar', methods=['POST'])
 def registrar():
-    """Procesa el registro de un nuevo usuario"""
-    
-    # 01: Obtener datos del formulario
+    # 01: obtener datos
     nombre_usuario = request.form.get('nombre_usuario', '').strip()
     correo = request.form.get('correo', '').strip().lower()
     password = request.form.get('password', '')
     password_confirm = request.form.get('password_confirm', '')
     
-    # 02: Validar campos obligatorios
+    # 02: validaciones
     if not nombre_usuario:
-        flash('El nombre de usuario es obligatorio', 'error')
+        flash('Nombre de usuario obligatorio', 'error')
         return redirect(url_for('register_view'))
-    
     if not correo:
-        flash('El correo electrónico es obligatorio', 'error')
+        flash('Correo obligatorio', 'error')
         return redirect(url_for('register_view'))
-    
     if not password:
-        flash('La contraseña es obligatoria', 'error')
+        flash('Contraseña obligatoria', 'error')
         return redirect(url_for('register_view'))
-    
-    # 03: Validar que las contraseñas coincidan
     if password != password_confirm:
         flash('Las contraseñas no coinciden', 'error')
         return redirect(url_for('register_view'))
-    
-    # 04: Validar que el correo no esté registrado
     if Usuario.query.filter_by(email=correo).first():
         flash('Este correo ya está registrado', 'error')
         return redirect(url_for('register_view'))
-    
-    # 05: Validar que el nombre de usuario no esté registrado
     if Usuario.query.filter_by(nombre_usuario=nombre_usuario).first():
         flash('Este nombre de usuario ya está en uso', 'error')
         return redirect(url_for('register_view'))
     
-    # 06: Crear el nuevo usuario
+    # 03: crear usuario
     try:
         nuevo_usuario = Usuario(
             nombre_usuario=nombre_usuario,
@@ -112,94 +84,59 @@ def registrar():
             verificado=False
         )
         db.session.add(nuevo_usuario)
-        db.session.flush()  # Para obtener el ID del usuario
+        db.session.flush()
         
-        # 07: Crear una agenda inicial para el usuario
+        # agenda inicial
         agenda_inicial = Agenda(
             usuario_id=nuevo_usuario.id,
             fecha=datetime.now().date(),
-            anotacion="¡Bienvenido a tu agenda personal! Aquí puedes guardar tus notas."
+            anotacion="¡Bienvenido a tu agenda personal!"
         )
         db.session.add(agenda_inicial)
         
-        # 08: Generar código de verificación
+        # codigo de verificacion
         codigo = str(random.randint(100000, 999999))
-        session['correo_verificar'] = correo
-        session['codigo_verificacion'] = codigo
+        session.update({'correo_verificar': correo, 'codigo_verificacion': codigo})
         
-        # 09: Enviar correo de verificación
+        # enviar correo
         try:
-            msg = Message(
-                "Verifica tu correo - Agenda Personal",
-                recipients=[correo]
-            )
-            msg.html = render_template(
-                "verify_email.html",
-                nombres=nombre_usuario,
-                codigo=codigo
-            )
+            msg = Message("Verifica tu correo", recipients=[correo])
+            msg.html = render_template("verify_email.html", nombres=nombre_usuario, codigo=codigo)
             mail.send(msg)
-        except Exception as e:
-            # Si falla el envío, continuamos igual (pero mostramos un aviso)
-            flash('No se pudo enviar el correo de verificación, pero puedes continuar', 'warning')
+        except:
+            flash('No se pudo enviar el correo', 'warning')
         
-        # 10: Guardar todo en la base de datos
         db.session.commit()
-        
-        flash(f'¡Registro exitoso! Se envió un código de verificación a {correo}', 'success')
+        flash(f'Registro exitoso. Código enviado a {correo}', 'success')
         return redirect(url_for('verify'))
-        
-    except Exception as e:
+    except:
         db.session.rollback()
-        flash(f'Error al registrar usuario: {str(e)}', 'error')
+        flash('Error en el registro', 'error')
         return redirect(url_for('register_view'))
 
-# ================================================
-# VERIFICACIÓN DE CORREO
-# ================================================
-
+# -- verificacion de correo -- #
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
-    """Verifica el código enviado al correo"""
-    
-    # Si ya está verificado o no hay correo en sesión, redirigir
     if 'correo_verificar' not in session:
         flash('No hay proceso de verificación activo', 'error')
         return redirect(url_for('login'))
     
     if request.method == 'POST':
-        codigo_ingresado = request.form.get('codigo', '').strip()
-        codigo_esperado = session.get('codigo_verificacion')
-        
-        if codigo_ingresado == codigo_esperado:
-            # Verificar al usuario
-            correo = session.get('correo_verificar')
-            usuario = Usuario.query.filter_by(email=correo).first()
-            
+        if request.form.get('codigo') == session.get('codigo_verificacion'):
+            usuario = Usuario.query.filter_by(email=session.get('correo_verificar')).first()
             if usuario:
                 usuario.verificado = True
                 db.session.commit()
-                flash('¡Correo verificado exitosamente! Ya puedes iniciar sesión', 'success')
-            else:
-                flash('Usuario no encontrado', 'error')
-            
-            # Limpiar sesión
             session.pop('correo_verificar', None)
             session.pop('codigo_verificacion', None)
+            flash('Correo verificado! Ya puedes iniciar sesión', 'success')
             return redirect(url_for('login'))
-        else:
-            flash('Código de verificación incorrecto. Intenta nuevamente.', 'error')
-    
+        flash('Código incorrecto', 'error')
     return render_template('verify.html')
 
-# ================================================
-# INICIO DE SESIÓN
-# ================================================
-
+# -- autenticacion -- #
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Inicio de sesión de usuarios"""
-    
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
     
@@ -211,61 +148,42 @@ def login():
             flash('Correo y contraseña son obligatorios', 'error')
             return render_template('login.html')
         
-        # Buscar usuario por correo
         usuario = Usuario.query.filter_by(email=correo).first()
         
-        if not usuario:
-            flash('Correo o contraseña incorrectos', 'error')
-            return render_template('login.html')
-        
-        if not check_password_hash(usuario.password_hash, password):
+        if not usuario or not check_password_hash(usuario.password_hash, password):
             flash('Correo o contraseña incorrectos', 'error')
             return render_template('login.html')
         
         if not usuario.verificado:
-            flash('Debes verificar tu correo primero. Revisa tu bandeja de entrada.', 'error')
+            flash('Debes verificar tu correo primero', 'error')
             return redirect(url_for('verify'))
         
-        # Iniciar sesión
-        session['user_id'] = usuario.id
-        session['email'] = usuario.email
-        session['nombre_usuario'] = usuario.nombre_usuario
-        
-        flash(f'¡Bienvenido, {usuario.nombre_usuario}!', 'success')
+        session.update({
+            'user_id': usuario.id,
+            'email': usuario.email,
+            'nombre_usuario': usuario.nombre_usuario
+        })
+        flash(f'Bienvenido, {usuario.nombre_usuario}!', 'success')
         return redirect(url_for('ver_agenda'))
     
     return render_template('login.html')
 
-# ================================================
-# CERRAR SESIÓN
-# ================================================
-
 @app.route('/logout')
 def logout():
-    """Cierra la sesión del usuario"""
     session.clear()
-    flash('Sesión cerrada correctamente', 'success')
+    flash('Sesión cerrada', 'success')
     return redirect(url_for('login'))
 
-# ================================================
-# AGENDA PERSONAL
-# ================================================
-
+# -- agenda personal -- #
 @app.route('/agenda')
 @login_required
 def ver_agenda():
-    """Muestra todas las anotaciones de la agenda del usuario"""
-    
-    usuario_id = session['user_id']
-    anotaciones = Agenda.query.filter_by(usuario_id=usuario_id).order_by(Agenda.fecha.desc()).all()
-    
+    anotaciones = Agenda.query.filter_by(usuario_id=session['user_id']).order_by(Agenda.fecha.desc()).all()
     return render_template('agenda.html', anotaciones=anotaciones)
 
 @app.route('/agenda/crear', methods=['GET', 'POST'])
 @login_required
 def crear_anotacion():
-    """Crea una nueva anotación en la agenda"""
-    
     if request.method == 'POST':
         fecha_str = request.form.get('fecha', '')
         anotacion = request.form.get('anotacion', '').strip()
@@ -273,44 +191,34 @@ def crear_anotacion():
         if not fecha_str:
             flash('La fecha es obligatoria', 'error')
             return render_template('agenda_crear.html')
-        
         if not anotacion:
             flash('La anotación no puede estar vacía', 'error')
             return render_template('agenda_crear.html')
         
         try:
             fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-            
             nueva_anotacion = Agenda(
                 usuario_id=session['user_id'],
                 fecha=fecha,
                 anotacion=anotacion
             )
-            
             db.session.add(nueva_anotacion)
             db.session.commit()
-            
-            flash('Anotación creada exitosamente', 'success')
+            flash('Anotación creada', 'success')
             return redirect(url_for('ver_agenda'))
-            
-        except ValueError:
-            flash('Formato de fecha inválido', 'error')
-        except Exception as e:
+        except:
             db.session.rollback()
-            flash(f'Error al crear la anotación: {str(e)}', 'error')
+            flash('Error al crear', 'error')
     
     return render_template('agenda_crear.html')
 
 @app.route('/agenda/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_anotacion(id):
-    """Edita una anotación existente"""
-    
     anotacion = Agenda.query.get_or_404(id)
     
-    # Verificar que la anotación pertenece al usuario
     if anotacion.usuario_id != session['user_id']:
-        flash('No tienes permiso para editar esta anotación', 'error')
+        flash('No tienes permiso', 'error')
         return redirect(url_for('ver_agenda'))
     
     if request.method == 'POST':
@@ -320,74 +228,54 @@ def editar_anotacion(id):
         if not fecha_str:
             flash('La fecha es obligatoria', 'error')
             return render_template('agenda_editar.html', anotacion=anotacion)
-        
         if not nuevo_texto:
             flash('La anotación no puede estar vacía', 'error')
             return render_template('agenda_editar.html', anotacion=anotacion)
         
         try:
-            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-            
-            anotacion.fecha = fecha
+            anotacion.fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
             anotacion.anotacion = nuevo_texto
             anotacion.fecha_actualizacion = datetime.utcnow()
-            
             db.session.commit()
-            
-            flash('Anotación actualizada exitosamente', 'success')
+            flash('Anotación actualizada', 'success')
             return redirect(url_for('ver_agenda'))
-            
-        except ValueError:
-            flash('Formato de fecha inválido', 'error')
-        except Exception as e:
+        except:
             db.session.rollback()
-            flash(f'Error al actualizar: {str(e)}', 'error')
+            flash('Error al actualizar', 'error')
     
     return render_template('agenda_editar.html', anotacion=anotacion)
 
 @app.route('/agenda/eliminar/<int:id>')
 @login_required
 def eliminar_anotacion(id):
-    """Elimina una anotación"""
-    
     anotacion = Agenda.query.get_or_404(id)
     
-    # Verificar que la anotación pertenece al usuario
     if anotacion.usuario_id != session['user_id']:
-        flash('No tienes permiso para eliminar esta anotación', 'error')
+        flash('No tienes permiso', 'error')
         return redirect(url_for('ver_agenda'))
     
     try:
         db.session.delete(anotacion)
         db.session.commit()
-        flash('Anotación eliminada correctamente', 'success')
-    except Exception as e:
+        flash('Anotación eliminada', 'success')
+    except:
         db.session.rollback()
-        flash(f'Error al eliminar: {str(e)}', 'error')
+        flash('Error al eliminar', 'error')
     
     return redirect(url_for('ver_agenda'))
 
-# ================================================
-# CAMBIAR TEMA (CLARO/OSCURO)
-# ================================================
-
+# -- funciones adicionales -- #
 @app.route('/cambiar-tema', methods=['POST'])
 def cambiar_tema():
-    """Cambia el tema de la interfaz (claro/oscuro)"""
-    
     modo = request.form.get('modo')
     resp = make_response(redirect(request.form.get('next', url_for('ver_agenda'))))
     resp.set_cookie('modo_claro', 'true' if modo == 'claro' else 'false', max_age=30*24*60*60)
     return resp
 
-# ================================================
-# INICIALIZACIÓN DE LA APLICACIÓN
-# ================================================
-
+# -- inicializacion -- #
 with app.app_context():
-    db.create_all()  # Crea las tablas si no existen
+    db.create_all()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-    
