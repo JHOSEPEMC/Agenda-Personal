@@ -2,7 +2,7 @@
 # 01: importar librerias
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash  # para manejo de contraseñas
-from models import db, Usuario, Postulante
+from models import db, Usuario, Agenda #Modelo nuevo, "agenda"
 from datetime import datetime
 from flask_mail import Message
 import random, os
