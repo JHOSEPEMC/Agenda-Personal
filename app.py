@@ -157,8 +157,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def log_request(f):
+    """Decorador que loguea automáticamente la petición"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        app.logger.info(f"Petición: {request.method} {request.path} - IP: {request.remote_addr}")
+        return f(*args, **kwargs)
+    return decorated
+
 # -- rutas principales -- #
 @app.route('/')
+@log_request
 def index():
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
@@ -166,12 +175,14 @@ def index():
 
 # -- registro de usuarios -- #
 @app.route('/registrarse')
+@log_request
 def register_view():
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
     return render_template('register.html')
 
 @app.route('/registrar', methods=['POST'])
+@log_request
 def registrar():
     # 01: obtener datos
     nombre_usuario = request.form.get('nombre_usuario', '').strip()
@@ -264,6 +275,7 @@ def registrar():
 
 # -- verificacion de correo -- #
 @app.route('/verify', methods=['GET', 'POST'])
+@log_request
 def verify():
     if 'correo_verificar' not in session:
         flash('No hay proceso de verificación activo', 'error')
@@ -293,6 +305,7 @@ def verify():
 
 # -- autenticacion -- #
 @app.route('/login', methods=['GET', 'POST'])
+@log_request
 def login():
     if 'user_id' in session:
         return redirect(url_for('ver_agenda'))
@@ -365,6 +378,7 @@ def login():
     return render_template('login.html')
 
 @app.route('/logout')
+@log_request
 def logout():
     if 'user_id' in session:
         log_seguridad('LOGOUT', f'Usuario: {session.get("nombre_usuario")}, Email: {session.get("email")}')
@@ -376,6 +390,7 @@ def logout():
 # -- agenda personal -- #
 @app.route('/agenda')
 @login_required
+@log_request
 def ver_agenda():
     try:
         usuario_id = session['user_id']
@@ -392,6 +407,7 @@ def ver_agenda():
 
 @app.route('/agenda/crear', methods=['GET', 'POST'])
 @login_required
+@log_request
 def crear_anotacion():
     if request.method == 'POST':
         fecha_str = request.form.get('fecha', '')
@@ -442,6 +458,7 @@ def crear_anotacion():
 
 @app.route('/agenda/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
+@log_request
 def editar_anotacion(id):
     try:
         anotacion = Agenda.query.get_or_404(id)
@@ -490,6 +507,7 @@ def editar_anotacion(id):
 
 @app.route('/agenda/eliminar/<int:id>')
 @login_required
+@log_request
 def eliminar_anotacion(id):
     try:
         anotacion = Agenda.query.get_or_404(id)
@@ -521,6 +539,7 @@ def eliminar_anotacion(id):
 
 # -- funciones adicionales -- #
 @app.route('/cambiar-tema', methods=['POST'])
+@log_request
 def cambiar_tema():
     modo = request.form.get('modo')
     resp = make_response(redirect(request.form.get('next', url_for('ver_agenda'))))
