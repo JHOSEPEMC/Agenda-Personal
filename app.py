@@ -4,6 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Usuario, Agenda
 from datetime import datetime
+from datetime import timedelta
+from collections import defaultdict
 from flask_mail import Message
 import random, os
 from config_mail import init_mail, mail
@@ -11,6 +13,7 @@ from functools import wraps
 import logging
 from logging.handlers import RotatingFileHandler
 import re #Para una mejor validacion de email.
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave_por_defecto')
@@ -68,6 +71,21 @@ app.config.update(
 
 db.init_app(app)
 init_mail(app)
+
+# Diccionario para almacenar intentos de login (en producción usar Redis)
+intentos_login = defaultdict(list)
+
+def verificar_rate_limit(key, limite=5, ventana=300):  # 5 intentos en 5 minutos
+    ahora = datetime.now().timestamp()
+    # Limpiar intentos antiguos
+    intentos_login[key] = [t for t in intentos_login[key] if ahora - t < ventana]
+    
+    if len(intentos_login[key]) >= limite:
+        tiempo_restante = int(ventana - (ahora - intentos_login[key][0]))
+        return False, tiempo_restante
+    
+    intentos_login[key].append(ahora)
+    return True, 0
 
 # -- Funcion de mejor validacion de email.
 def validar_email(email):
@@ -258,6 +276,17 @@ def login():
         
         app.logger.info(f"Intento de login - Email: {correo}")
         
+        key = f"login_{correo}_{request.remote_addr}"
+        permitido, tiempo = verificar_rate_limit(key)
+        # Espera para nuevos intentos al logear.
+        if not permitido:
+            flash(f'Demasiados intentos. Espera {tiempo} segundos', 'error')
+            log_seguridad('RATE_LIMIT', f'Email: {correo}, IP: {request.remote_addr}')
+            return render_template('login.html')
+        # Validcacion de email en login
+        if not validar_email(correo):
+            flash('El correo no tiene un formato válido', 'error')
+            return redirect(url_for('register_view'))
         if not correo or not password:
             flash('Correo y contraseña son obligatorios', 'error')
             log_seguridad('LOGIN_FALLIDO', f'Campos vacíos - Email: {correo}')
