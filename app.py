@@ -114,6 +114,21 @@ def verificar_duplicados(modelo, **filtros):
     """Verifica si existe un registro con los filtros dados"""
     return modelo.query.filter_by(**filtros).first() is not None
 
+# -- Funcion para enviar email de verificacion -- #
+def enviar_email_verificacion(correo, nombre_usuario, codigo):
+    """Envía email de verificación con manejo de errores"""
+    try:
+        msg = Message("Verifica tu correo", recipients=[correo])
+        msg.html = render_template("verify_email.html", 
+                                 nombres=nombre_usuario, 
+                                 codigo=codigo)
+        mail.send(msg)
+        app.logger.info(f"Email de verificación enviado a: {correo}")
+        return True, ""
+    except Exception as e:
+        log_error('ENVIO_EMAIL', e)
+        return False, str(e)
+
 # -- Decoradores para control de acceso -- #
 def login_required(f):
     @wraps(f)
@@ -214,15 +229,10 @@ def registrar():
         session.update({'correo_verificar': correo, 'codigo_verificacion': codigo})
         app.logger.info(f"Código de verificación generado para: {correo}")
         
-        # enviar correo
-        try:
-            msg = Message("Verifica tu correo", recipients=[correo])
-            msg.html = render_template("verify_email.html", nombres=nombre_usuario, codigo=codigo)
-            mail.send(msg)
-            app.logger.info(f"Email de verificación enviado a: {correo}")
-        except Exception as e:
-            log_error('ENVIO_EMAIL', e)
-            flash('No se pudo enviar el correo', 'warning')
+        # enviar correo usando la función auxiliar
+        exito, error = enviar_email_verificacion(correo, nombre_usuario, codigo)
+        if not exito:
+            flash('No se pudo enviar el correo de verificación', 'warning')
         
         db.session.commit()
         log_seguridad('REGISTRO_EXITOSO', f'Usuario: {nombre_usuario}, Email: {correo}')
