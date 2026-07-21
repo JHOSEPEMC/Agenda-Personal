@@ -129,6 +129,23 @@ def enviar_email_verificacion(correo, nombre_usuario, codigo):
         log_error('ENVIO_EMAIL', e)
         return False, str(e)
 
+# -- Funcion para verificar codigo de verificacion -- #
+def verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo):
+    """Verifica el código y actualiza el usuario si es correcto"""
+    if codigo_ingresado != codigo_guardado:
+        return False, "Código incorrecto"
+    
+    usuario = Usuario.query.filter_by(email=correo).first()
+    if not usuario:
+        return False, "Usuario no encontrado"
+    
+    if usuario.verificado:
+        return False, "El usuario ya está verificado"
+    
+    usuario.verificado = True
+    db.session.commit()
+    return True, "Correo verificado exitosamente"
+
 # -- Decoradores para control de acceso -- #
 def login_required(f):
     @wraps(f)
@@ -260,32 +277,18 @@ def verify():
         
         app.logger.info(f"Intento de verificación - Email: {correo}")
         
-        if codigo_ingresado == codigo_guardado:
-            try:
-                usuario = Usuario.query.filter_by(email=correo).first()
-                if usuario:
-                    usuario.verificado = True
-                    db.session.commit()
-                    app.logger.info(f"Usuario verificado - ID: {usuario.id}, Email: {correo}")
-                    log_seguridad('VERIFICACION_EXITOSA', f'Email: {correo}')
-                else:
-                    app.logger.warning(f"Usuario no encontrado en verificación - Email: {correo}")
-                    flash('Usuario no encontrado', 'error')
-                    return redirect(url_for('login'))
-                
-                session.pop('correo_verificar', None)
-                session.pop('codigo_verificacion', None)
-                flash('Correo verificado! Ya puedes iniciar sesión', 'success')
-                return redirect(url_for('login'))
-            except Exception as e:
-                db.session.rollback()
-                log_error('VERIFICACION_USUARIO', e)
-                flash('Error al verificar', 'error')
+        # Usar la función auxiliar para verificar el código
+        exito, mensaje = verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo)
+        
+        if exito:
+            session.pop('correo_verificar', None)
+            session.pop('codigo_verificacion', None)
+            flash(mensaje, 'success')
+            log_seguridad('VERIFICACION_EXITOSA', f'Email: {correo}')
+            return redirect(url_for('login'))
         else:
-            app.logger.warning(f"Código incorrecto para verificación - Email: {correo}")
-            log_seguridad('VERIFICACION_FALLIDA', f'Código incorrecto - Email: {correo}')
-            flash('Código incorrecto', 'error')
-    
+            flash(mensaje, 'error')
+            if mensaje == "Usuario no encontrado": return redirect(url_for('login'))
     return render_template('verify.html')
 
 # -- autenticacion -- #
