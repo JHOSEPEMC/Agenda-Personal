@@ -34,8 +34,7 @@ def login_required(f):
 
 # -- funciones auxiliares -- #
 # 01: valida que el dni tenga 8 digitos
-def validar_dni(dni):
-    return len(dni)==8 and dni.isdigit()
+''' def validar_dni(dni): return len(dni)==8 and dni.isdigit() ''' #quitando validar dni
 
 # -- rutas principales -- #
 @app.route('/')
@@ -51,13 +50,13 @@ def register_view():
 # 01: procesa el formulario de registro
 @app.route('/postular',methods=['POST'])
 def postular():
-    datos={k:request.form.get(k,'').strip() for k in ['nombres','apellidos','fecha_nacimiento','correo','dni','password']}
+    datos={k:request.form.get(k,'').strip() for k in ['nombres','correo','password']}
     datos['correo']=datos['correo'].lower()
     
     # validaciones basicas
     if not all(datos.values()): flash('Todos los campos son obligatorios','error'); return redirect(url_for('register_view'))
     if request.form.get('password')!=request.form.get('password_confirm'): flash('Las contraseñas no coinciden','error'); return redirect(url_for('register_view'))
-    if not validar_dni(datos['dni']): flash('El DNI debe tener 8 dígitos','error'); return redirect(url_for('register_view'))
+    #if not validar_dni(datos['dni']): flash('El DNI debe tener 8 dígitos','error'); return redirect(url_for('register_view'))
     if Usuario.query.filter_by(email=datos['correo']).first(): flash('El correo ya está registrado','error'); return redirect(url_for('register_view'))
     
     try:
@@ -70,7 +69,7 @@ def postular():
             nombres=datos['nombres'],
             apellidos=datos['apellidos'],
             fecha_nacimiento=datetime.strptime(datos['fecha_nacimiento'],'%Y-%m-%d').date(),
-            dni=datos['dni'],
+            #dni=datos['dni'],
             estado='pendiente'
         )
         db.session.add(nueva_agenda)
