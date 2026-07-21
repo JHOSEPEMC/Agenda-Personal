@@ -86,10 +86,33 @@ def verificar_rate_limit(key, limite=5, ventana=300):  # 5 intentos en 5 minutos
     intentos_login[key].append(ahora)
     return True, 0
 
-# -- Funcion de mejor validacion de email.
+# -- Funciones de validacion auxiliares -- #
 def validar_email(email):
     patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(patron, email) is not None
+
+def validar_password(password):
+    """Valida que la contraseña cumpla con los requisitos de seguridad"""
+    if len(password) < 8:
+        return False, "La contraseña debe tener al menos 8 caracteres"
+    if not any(c.isupper() for c in password):
+        return False, "La contraseña debe tener al menos una mayúscula"
+    if not any(c.islower() for c in password):
+        return False, "La contraseña debe tener al menos una minúscula"
+    if not any(c.isdigit() for c in password):
+        return False, "La contraseña debe tener al menos un número"
+    return True, ""
+
+def validar_campos_obligatorios(datos):
+    """Valida que todos los campos requeridos estén presentes"""
+    for campo, valor in datos.items():
+        if not valor:
+            return False, f"El campo {campo} es obligatorio"
+    return True, ""
+
+def verificar_duplicados(modelo, **filtros):
+    """Verifica si existe un registro con los filtros dados"""
+    return modelo.query.filter_by(**filtros).first() is not None
 
 # -- Decoradores para control de acceso -- #
 def login_required(f):
@@ -126,54 +149,46 @@ def registrar():
     
     app.logger.info(f"Intento de registro - Usuario: {nombre_usuario}, Email: {correo}")
     
-    # 02: validaciones
-    if not nombre_usuario:
-        flash('Nombre de usuario obligatorio', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Nombre de usuario vacio - Email: {correo}')
+    # 02: validar campos obligatorios
+    valido, mensaje = validar_campos_obligatorios({
+        'nombre_usuario': nombre_usuario,
+        'correo': correo,
+        'password': password
+    })
+    if not valido:
+        flash(mensaje, 'error')
+        log_seguridad('REGISTRO_FALLIDO', f'{mensaje} - Email: {correo}')
         return redirect(url_for('register_view'))
-    if not correo:
-        flash('Correo obligatorio', 'error')
-        log_seguridad('REGISTRO_FALLIDO', 'Correo vacio')
-        return redirect(url_for('register_view'))
+    
+    # 03: validar email
     if not validar_email(correo):
         flash('El correo no tiene un formato válido', 'error')
         return redirect(url_for('register_view'))
-    if not password:
-        flash('Contraseña obligatoria', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Contraseña vacia - Email: {correo}')
-        return redirect(url_for('register_view'))
+    
+    # 04: validar contraseñas
     if password != password_confirm:
         flash('Las contraseñas no coinciden', 'error')
         log_seguridad('REGISTRO_FALLIDO', f'Contraseñas no coinciden - Email: {correo}')
         return redirect(url_for('register_view'))
-    if len(password) < 8:
-        flash('La contraseña debe tener al menos 8 caracteres', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Contraseña muy corta - Email: {correo}')
-        return redirect(url_for('register_view'))
-    if not any(c.isupper() for c in password):
-        flash('La contraseña debe tener al menos una mayúscula', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Contraseña sin mayúscula - Email: {correo}')
-        return redirect(url_for('register_view'))
-    if not any(c.islower() for c in password):
-        flash('La contraseña debe tener al menos una minúscula', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Contraseña sin minúscula - Email: {correo}')
-        return redirect(url_for('register_view'))
-    if not any(c.isdigit() for c in password):
-        flash('La contraseña debe tener al menos un número', 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'Contraseña sin número - Email: {correo}')
+    
+    valido, mensaje = validar_password(password)
+    if not valido:
+        flash(mensaje, 'error')
+        log_seguridad('REGISTRO_FALLIDO', f'{mensaje} - Email: {correo}')
         return redirect(url_for('register_view'))
     
-    # Validar email duplicado
-    if Usuario.query.filter_by(email=correo).first():
+    # 05: verificar duplicados
+    if verificar_duplicados(Usuario, email=correo):
         flash('Este correo ya está registrado', 'error')
         log_seguridad('REGISTRO_FALLIDO', f'Email duplicado: {correo}')
         return redirect(url_for('register_view'))
-    if Usuario.query.filter_by(nombre_usuario=nombre_usuario).first():
+    
+    if verificar_duplicados(Usuario, nombre_usuario=nombre_usuario):
         flash('Este nombre de usuario ya está en uso', 'error')
         log_seguridad('REGISTRO_FALLIDO', f'Usuario duplicado: {nombre_usuario}')
         return redirect(url_for('register_view'))
     
-    # 03: crear usuario
+    # 06: crear usuario
     try:
         nuevo_usuario = Usuario(
             nombre_usuario=nombre_usuario,
@@ -282,11 +297,18 @@ def login():
             flash(f'Demasiados intentos. Espera {tiempo} segundos', 'error')
             log_seguridad('RATE_LIMIT', f'Email: {correo}, IP: {request.remote_addr}')
             return render_template('login.html')
-        if not correo or not password:
-            flash('Correo y contraseña son obligatorios', 'error')
+        
+        # Validar campos obligatorios
+        valido, mensaje = validar_campos_obligatorios({
+            'correo': correo,
+            'password': password
+        })
+        if not valido:
+            flash(mensaje, 'error')
             log_seguridad('LOGIN_FALLIDO', f'Campos vacíos - Email: {correo}')
             return render_template('login.html')
-        # Validcacion de email en login
+        
+        # Validacion de email en login
         if not validar_email(correo):
             flash('El correo no tiene un formato válido', 'error')
             return render_template('login.html')
