@@ -3,11 +3,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Usuario, Agenda
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from collections import defaultdict
 from flask_mail import Message
-import random, os
+import random, os, secrets
 from config_mail import init_mail, mail
 from functools import wraps
 import logging
@@ -283,13 +282,13 @@ def login():
             flash(f'Demasiados intentos. Espera {tiempo} segundos', 'error')
             log_seguridad('RATE_LIMIT', f'Email: {correo}, IP: {request.remote_addr}')
             return render_template('login.html')
-        # Validcacion de email en login
-        if not validar_email(correo):
-            flash('El correo no tiene un formato válido', 'error')
-            return redirect(url_for('register_view'))
         if not correo or not password:
             flash('Correo y contraseña son obligatorios', 'error')
             log_seguridad('LOGIN_FALLIDO', f'Campos vacíos - Email: {correo}')
+            return render_template('login.html')
+        # Validcacion de email en login
+        if not validar_email(correo):
+            flash('El correo no tiene un formato válido', 'error')
             return render_template('login.html')
         
         try:
@@ -523,6 +522,6 @@ app.logger.info("=== APLICACION LISTA ===")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    debug_mode = os.environ.get("FLASK_DEBUG", "True") == "True"
+    debug_mode = os.environ.get("FLASK_DEBUG", "False") == "True" #Debug_mode
     app.logger.info(f"Iniciando servidor en puerto {port}, debug={debug_mode}")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
