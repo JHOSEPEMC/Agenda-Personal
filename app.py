@@ -10,6 +10,7 @@ from config_mail import init_mail, mail
 from functools import wraps
 import logging
 from logging.handlers import RotatingFileHandler
+import re #Para una mejor validacion de email.
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave_por_defecto')
@@ -65,6 +66,11 @@ app.config.update(
 db.init_app(app)
 init_mail(app)
 
+# -- Funcion de mejor validacion de email.
+def validar_email(email):
+    patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(patron, email) is not None
+
 # -- Decoradores para control de acceso -- #
 def login_required(f):
     @wraps(f)
@@ -108,6 +114,9 @@ def registrar():
     if not correo:
         flash('Correo obligatorio', 'error')
         log_seguridad('REGISTRO_FALLIDO', 'Correo vacio')
+        return redirect(url_for('register_view'))
+    if not validar_email(correo):
+        flash('El correo no tiene un formato válido', 'error')
         return redirect(url_for('register_view'))
     if not password:
         flash('Contraseña obligatoria', 'error')
