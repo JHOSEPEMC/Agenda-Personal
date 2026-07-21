@@ -14,6 +14,9 @@ import re #Para una mejor validacion de email.
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave_por_defecto')
+# Configurar tiempo de sesión (1 hora)
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # -- Configuracion de logging -- #
@@ -287,7 +290,7 @@ def login():
             
             log_seguridad('LOGIN_EXITOSO', f'Usuario: {usuario.nombre_usuario}, Email: {correo}')
             app.logger.info(f"Login exitoso - ID: {usuario.id}, Email: {correo}")
-            
+            session.permanent = True
             flash(f'Bienvenido, {usuario.nombre_usuario}!', 'success')
             return redirect(url_for('ver_agenda'))
             
