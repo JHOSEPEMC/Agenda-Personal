@@ -13,6 +13,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import re
 from contextlib import contextmanager
+from sqlalchemy import extract
 
 # -- Constantes de configuracion -- #
 SESSION_LIFETIME = 3600  # 1 hora
@@ -20,6 +21,7 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW = 300  # 5 minutos
 PASSWORD_MIN_LENGTH = 8
 CODIGO_VERIFICACION_LENGTH = 6
+ANOTACIONES_POR_PAGINA = 10
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave_por_defecto')
@@ -176,6 +178,19 @@ def eliminar_anotacion(anotacion):
     db.session.delete(anotacion)
     db.session.commit()
 
+def obtener_anotaciones_paginadas(usuario_id, page=1, per_page=ANOTACIONES_POR_PAGINA):
+    """Obtiene anotaciones paginadas"""
+    return Agenda.query.filter_by(usuario_id=usuario_id)\
+        .order_by(Agenda.fecha.desc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+def obtener_anotaciones_por_mes(usuario_id, mes, año):
+    """Obtiene anotaciones filtradas por mes y año"""
+    return Agenda.query.filter_by(usuario_id=usuario_id)\
+        .filter(extract('month', Agenda.fecha) == mes)\
+        .filter(extract('year', Agenda.fecha) == año)\
+        .order_by(Agenda.fecha.desc()).all()
+
 # -- Validacion de registro agrupada -- #
 def validar_registro(nombre_usuario, correo, password, password_confirm):
     resultado = validar_campos_obligatorios({
@@ -310,6 +325,38 @@ def verify():
     
     return render_template('verify.html')
 
+@app.route('/reenviar-codigo')
+@log_request
+def reenviar_codigo():
+    correo = session.get('correo_verificar')
+    if not correo:
+        flash('No hay proceso de verificación activo', 'error')
+        return redirect(url_for('login'))
+    
+    usuario = Usuario.query.filter_by(email=correo).first()
+    if not usuario:
+        flash('Usuario no encontrado', 'error')
+        return redirect(url_for('login'))
+    
+    if usuario.verificado:
+        flash('El usuario ya está verificado', 'info')
+        session.pop('correo_verificar', None)
+        session.pop('codigo_verificacion', None)
+        return redirect(url_for('login'))
+    
+    # Generar nuevo código
+    codigo = str(random.randint(100000, 999999))
+    session['codigo_verificacion'] = codigo
+    
+    # Enviar nuevo email
+    resultado = enviar_email_verificacion(correo, usuario.nombre_usuario, codigo)
+    if resultado.exito:
+        flash('Nuevo código enviado a tu correo', 'success')
+    else:
+        flash('Error al enviar el código. Intenta nuevamente.', 'error')
+    
+    return redirect(url_for('verify'))
+
 @app.route('/login', methods=['GET', 'POST'])
 @log_request
 def login():
@@ -381,8 +428,35 @@ def logout():
 def ver_agenda():
     try:
         usuario_id = session['user_id']
-        anotaciones = obtener_anotaciones(usuario_id)
-        return render_template('agenda.html', anotaciones=anotaciones)
+        
+        # Obtener parámetros de filtro
+        mes = request.args.get('mes', type=int)
+        año = request.args.get('año', type=int)
+        page = request.args.get('page', 1, type=int)
+        
+        if mes and año:
+            # Filtrar por mes/año
+            anotaciones = obtener_anotaciones_por_mes(usuario_id, mes, año)
+            pagination = None
+        else:
+            # Paginación normal
+            pagination = obtener_anotaciones_paginadas(usuario_id, page)
+            anotaciones = pagination.items
+        
+        # Obtener meses disponibles para el filtro
+        meses_disponibles = db.session.query(
+            extract('year', Agenda.fecha).label('año'),
+            extract('month', Agenda.fecha).label('mes')
+        ).filter_by(usuario_id=usuario_id)\
+         .group_by('año', 'mes')\
+         .order_by('año', 'mes').all()
+        
+        return render_template('agenda.html', 
+                             anotaciones=anotaciones,
+                             pagination=pagination,
+                             mes_actual=mes,
+                             año_actual=año,
+                             meses_disponibles=meses_disponibles)
     except Exception as e:
         log_error('VER_AGENDA', e)
         flash('Error al cargar la agenda', 'error')
@@ -406,6 +480,11 @@ def crear_anotacion():
         
         try:
             fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            
+            # Validar que no sea fecha futura
+            if fecha > datetime.now().date():
+                flash('No puedes crear anotaciones en el futuro', 'error')
+                return render_template('agenda_crear.html')
             
             existente = obtener_anotacion_por_fecha(usuario_id, fecha)
             if existente:
@@ -449,6 +528,12 @@ def editar_anotacion(id):
             
             try:
                 fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                
+                # Validar que no sea fecha futura
+                if fecha > datetime.now().date():
+                    flash('No puedes poner una fecha futura', 'error')
+                    return render_template('agenda_editar.html', anotacion=anotacion)
+                
                 with transaccion():
                     actualizar_anotacion(anotacion, fecha, nuevo_texto)
                 
@@ -465,7 +550,7 @@ def editar_anotacion(id):
         flash('Error al cargar la anotación', 'error')
         return redirect(url_for('ver_agenda'))
 
-@app.route('/agenda/eliminar/<int:id>')
+@app.route('/agenda/eliminar/<int:id>', methods=['POST'])
 @login_required
 @log_request
 def eliminar_anotacion(id):
