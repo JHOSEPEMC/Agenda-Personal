@@ -3,38 +3,95 @@
 {% block title %}Mi Agenda{% endblock %}
 
 {% block content %}
-<form method="POST" action="" class="columnas" style="align-items: stretch; min-height: calc(100vh - 120px);">
-    <!-- Columna Izquierda: Anotación del día seleccionado -->
-    <div class="columna1" style="justify-content: flex-start; padding: 10px;">
-        <div class="tarjeta-admin" style="width: 100%; margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 400px; height: 100%;">
-            <h2 style="margin-bottom: 15px; color: var(--accent-color);">Anotación del Día</h2>
-            
-            <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 15px;">
-                <label for="anotacion" style="margin-bottom: 8px;">Texto de la anotación:</label>
-                <textarea id="anotacion" name="anotacion" class="form-control" style="flex-grow: 1; min-height: 250px; resize: none; font-family: inherit; font-size: 1.05em; padding: 12px;" placeholder="Escribe aquí las anotaciones para el día seleccionado...">{{ anotacion }}</textarea>
-            </div>
-            
-            <button type="submit" class="btn" style="width: 100%;">Guardar Anotación</button>
+<div class="container" style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+
+    <!-- Encabezado y Accesos Rápidos -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap;">
+        <div>
+            <h1 style="margin: 0; color: var(--accent-color, #2c3e50);">Mi Agenda</h1>
+            <p style="margin: 5px 0 0 0; color: #666;">Gestiona tus notas y publicaciones por fecha</p>
         </div>
+        <a href="{{ url_for('crear_anotacion') }}" class="btn" style="padding: 10px 20px; font-weight: bold;">
+            + Nueva Anotación
+        </a>
     </div>
 
-    <!-- Columna Derecha: Calendario por defecto (<input type="date">) -->
-    <div class="columna2" style="justify-content: flex-start; align-items: stretch; padding: 10px;">
-        <div class="tarjeta-admin" style="width: 100%; margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 400px; height: 100%; justify-content: center;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--accent-color);">Seleccionar Fecha</h2>
-            
-            <div class="form-group" style="text-align: center;">
-                <label for="fecha" style="margin-bottom: 12px; display: block;">Fecha de la agenda:</label>
-                <!-- Etiqueta por defecto del calendario -->
-                <input type="date" id="fecha" name="fecha" class="form-control" style="font-size: 1.2em; padding: 12px; text-align: center; max-width: 300px; margin: 0 auto;" value="{{ fecha_seleccionada }}">
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button type="submit" name="accion" value="cargar" class="btn" style="background: transparent; border: 1px solid var(--accent-color); color: var(--text-color);">Cargar Notas de la Fecha</button>
-            </div>
-        </div>
+    <!-- Filtro por Mes/Año -->
+    <div class="tarjeta-admin" style="padding: 15px 20px; margin-bottom: 25px;">
+        <form method="GET" action="{{ url_for('ver_agenda') }}" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <label style="font-weight: bold; margin: 0;">Filtrar por mes:</label>
+            <select name="filtro_mes" class="form-control" style="max-width: 280px; padding: 8px 12px;" onchange="if(this.value){ window.location.href=this.value; }">
+                <option value="{{ url_for('ver_agenda') }}">-- Todas las anotaciones --</option>
+                {% for item in meses_disponibles %}
+                    {% set m = item.mes | int %}
+                    {% set a = item.año | int %}
+                    <option value="{{ url_for('ver_agenda', mes=m, año=a) }}" {% if mes_actual == m and año_actual == a %}selected{% endif %}>
+                        {{ m }}/{{ a }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            {% if mes_actual and año_actual %}
+                <a href="{{ url_for('ver_agenda') }}" style="color: #e74c3c; text-decoration: none; font-size: 0.9em;">
+                    ✕ Limpiar filtro
+                </a>
+            {% endif %}
+        </form>
     </div>
-</form>
+
+    <!-- Lista de Anotaciones -->
+    {% if anotaciones and anotaciones|length > 0 %}
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            {% for anotacion in anotaciones %}
+                <div class="tarjeta-admin" style="padding: 20px; border-left: 4px solid var(--accent-color, #3498db); display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                        <span style="font-weight: bold; font-size: 1.1em; color: var(--accent-color, #2c3e50);">
+                            📅 {{ anotacion.fecha.strftime('%d/%m/%Y') }}
+                        </span>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="{{ url_for('editar_anotacion', id=anotacion.id) }}" class="btn" style="padding: 5px 12px; font-size: 0.85em; background-color: #f39c12;">
+                                Editar
+                            </a>
+                            <form method="POST" action="{{ url_for('eliminar_anotacion', id=anotacion.id) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar esta anotación?');">
+                                <button type="submit" class="btn" style="padding: 5px 12px; font-size: 0.85em; background-color: #e74c3c;">
+                                    Eliminar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <p style="margin: 0; white-space: pre-wrap; font-size: 1em; line-height: 1.5; color: #333;">
+                        {{ anotacion.anotacion }}
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Paginación (solo si existe pagination) -->
+        {% if pagination and pagination.pages > 1 %}
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 25px;">
+                {% if pagination.has_prev %}
+                    <a href="{{ url_for('ver_agenda', page=pagination.prev_num) }}" class="btn" style="padding: 6px 14px; font-size: 0.9em;">&laquo; Anterior</a>
+                {% endif %}
+
+                <span style="font-size: 0.9em; color: #666; margin: 0 5px;">
+                    Página {{ pagination.page }} de {{ pagination.pages }}
+                </span>
+
+                {% if pagination.has_next %}
+                    <a href="{{ url_for('ver_agenda', page=pagination.next_num) }}" class="btn" style="padding: 6px 14px; font-size: 0.9em;">Siguiente &raquo;</a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Estado Vacío -->
+        <div class="tarjeta-admin" style="padding: 40px 20px; text-align: center;">
+            <p style="font-size: 1.1em; color: #666; margin-bottom: 20px;">No tienes anotaciones registradas{% if mes_actual %} en este período{% endif %}.</p>
+            <a href="{{ url_for('crear_anotacion') }}" class="btn" style="padding: 10px 20px;">
+                Crear tu primera anotación
+            </a>
+        </div>
+    {% endif %}
+
+</div>
 {% endblock %}
-
-
