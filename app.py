@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Usuario, Agenda
 from datetime import datetime, timedelta
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from flask_mail import Message
 import random, os, secrets
 from config_mail import init_mail, mail
@@ -61,6 +61,9 @@ def log_error(evento, error, ip=None):
 
 app.logger.info("=== APLICACION INICIADA ===")
 
+# -- Definir namedtuple para respuestas -- #
+Resultado = namedtuple('Resultado', ['exito', 'mensaje', 'datos'])
+
 # -- Configuracion de la app -- #
 # 01: base de datos
 app.config.update(
@@ -81,10 +84,10 @@ def verificar_rate_limit(key, limite=5, ventana=300):  # 5 intentos en 5 minutos
     
     if len(intentos_login[key]) >= limite:
         tiempo_restante = int(ventana - (ahora - intentos_login[key][0]))
-        return False, tiempo_restante
+        return Resultado(False, f'Demasiados intentos. Espera {tiempo_restante} segundos', None)
     
     intentos_login[key].append(ahora)
-    return True, 0
+    return Resultado(True, '', None)
 
 # -- Funciones de validacion auxiliares -- #
 def validar_email(email):
@@ -94,21 +97,21 @@ def validar_email(email):
 def validar_password(password):
     """Valida que la contraseña cumpla con los requisitos de seguridad"""
     if len(password) < 8:
-        return False, "La contraseña debe tener al menos 8 caracteres"
+        return Resultado(False, "La contraseña debe tener al menos 8 caracteres", None)
     if not any(c.isupper() for c in password):
-        return False, "La contraseña debe tener al menos una mayúscula"
+        return Resultado(False, "La contraseña debe tener al menos una mayúscula", None)
     if not any(c.islower() for c in password):
-        return False, "La contraseña debe tener al menos una minúscula"
+        return Resultado(False, "La contraseña debe tener al menos una minúscula", None)
     if not any(c.isdigit() for c in password):
-        return False, "La contraseña debe tener al menos un número"
-    return True, ""
+        return Resultado(False, "La contraseña debe tener al menos un número", None)
+    return Resultado(True, "", None)
 
 def validar_campos_obligatorios(datos):
     """Valida que todos los campos requeridos estén presentes"""
     for campo, valor in datos.items():
         if not valor:
-            return False, f"El campo {campo} es obligatorio"
-    return True, ""
+            return Resultado(False, f"El campo {campo} es obligatorio", None)
+    return Resultado(True, "", None)
 
 def verificar_duplicados(modelo, **filtros):
     """Verifica si existe un registro con los filtros dados"""
@@ -124,27 +127,27 @@ def enviar_email_verificacion(correo, nombre_usuario, codigo):
                                     codigo=codigo)
         mail.send(msg)
         app.logger.info(f"Email de verificación enviado a: {correo}")
-        return True, ""
+        return Resultado(True, "", None)
     except Exception as e:
         log_error('ENVIO_EMAIL', e)
-        return False, str(e)
+        return Resultado(False, str(e), None)
 
 # -- Funcion para verificar codigo de verificacion -- #
 def verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo):
     """Verifica el código y actualiza el usuario si es correcto"""
     if codigo_ingresado != codigo_guardado:
-        return False, "Código incorrecto"
+        return Resultado(False, "Código incorrecto", None)
     
     usuario = Usuario.query.filter_by(email=correo).first()
     if not usuario:
-        return False, "Usuario no encontrado"
+        return Resultado(False, "Usuario no encontrado", None)
     
     if usuario.verificado:
-        return False, "El usuario ya está verificado"
+        return Resultado(False, "El usuario ya está verificado", None)
     
     usuario.verificado = True
     db.session.commit()
-    return True, "Correo verificado exitosamente"
+    return Resultado(True, "Correo verificado exitosamente", usuario)
 
 # -- Funciones helper para agenda -- #
 def obtener_anotaciones(usuario_id):
@@ -230,14 +233,14 @@ def registrar():
     app.logger.info(f"Intento de registro - Usuario: {nombre_usuario}, Email: {correo}")
     
     # 02: validar campos obligatorios
-    valido, mensaje = validar_campos_obligatorios({
+    resultado = validar_campos_obligatorios({
         'nombre_usuario': nombre_usuario,
         'correo': correo,
         'password': password
     })
-    if not valido:
-        flash(mensaje, 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'{mensaje} - Email: {correo}')
+    if not resultado.exito:
+        flash(resultado.mensaje, 'error')
+        log_seguridad('REGISTRO_FALLIDO', f'{resultado.mensaje} - Email: {correo}')
         return redirect(url_for('register_view'))
     
     # 03: validar email
@@ -251,10 +254,10 @@ def registrar():
         log_seguridad('REGISTRO_FALLIDO', f'Contraseñas no coinciden - Email: {correo}')
         return redirect(url_for('register_view'))
     
-    valido, mensaje = validar_password(password)
-    if not valido:
-        flash(mensaje, 'error')
-        log_seguridad('REGISTRO_FALLIDO', f'{mensaje} - Email: {correo}')
+    resultado = validar_password(password)
+    if not resultado.exito:
+        flash(resultado.mensaje, 'error')
+        log_seguridad('REGISTRO_FALLIDO', f'{resultado.mensaje} - Email: {correo}')
         return redirect(url_for('register_view'))
     
     # 05: verificar duplicados
@@ -295,8 +298,8 @@ def registrar():
         app.logger.info(f"Código de verificación generado para: {correo}")
         
         # enviar correo usando la función auxiliar
-        exito, error = enviar_email_verificacion(correo, nombre_usuario, codigo)
-        if not exito:
+        resultado = enviar_email_verificacion(correo, nombre_usuario, codigo)
+        if not resultado.exito:
             flash('No se pudo enviar el correo de verificación', 'warning')
         
         db.session.commit()
@@ -327,17 +330,18 @@ def verify():
         app.logger.info(f"Intento de verificación - Email: {correo}")
         
         # Usar la función auxiliar para verificar el código
-        exito, mensaje = verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo)
+        resultado = verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo)
         
-        if exito:
+        if resultado.exito:
             session.pop('correo_verificar', None)
             session.pop('codigo_verificacion', None)
-            flash(mensaje, 'success')
+            flash(resultado.mensaje, 'success')
             log_seguridad('VERIFICACION_EXITOSA', f'Email: {correo}')
             return redirect(url_for('login'))
         else:
-            flash(mensaje, 'error')
-            if mensaje == "Usuario no encontrado": return redirect(url_for('login'))
+            flash(resultado.mensaje, 'error')
+            if resultado.mensaje == "Usuario no encontrado":
+                return redirect(url_for('login'))
     return render_template('verify.html')
 
 # -- autenticacion -- #
@@ -354,20 +358,20 @@ def login():
         app.logger.info(f"Intento de login - Email: {correo}")
         
         key = f"login_{correo}_{request.remote_addr}"
-        permitido, tiempo = verificar_rate_limit(key)
+        resultado = verificar_rate_limit(key)
         # Espera para nuevos intentos al logear.
-        if not permitido:
-            flash(f'Demasiados intentos. Espera {tiempo} segundos', 'error')
+        if not resultado.exito:
+            flash(resultado.mensaje, 'error')
             log_seguridad('RATE_LIMIT', f'Email: {correo}, IP: {request.remote_addr}')
             return render_template('login.html')
         
         # Validar campos obligatorios
-        valido, mensaje = validar_campos_obligatorios({
+        resultado = validar_campos_obligatorios({
             'correo': correo,
             'password': password
         })
-        if not valido:
-            flash(mensaje, 'error')
+        if not resultado.exito:
+            flash(resultado.mensaje, 'error')
             log_seguridad('LOGIN_FALLIDO', f'Campos vacíos - Email: {correo}')
             return render_template('login.html')
         
