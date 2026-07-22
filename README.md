@@ -135,4 +135,4 @@ flask-login-system/
 *   JHOSEPEMC - *Base de datos *
 
 ---
-© 2026 Sistema de Admisión IESTPO
+© 2026 Sistema De Agenda Personal IESTPO
