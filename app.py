@@ -136,6 +136,10 @@ def dashboard():
 def cambiar_tema():
     modo = request.form.get('modo')
     resp = make_response(redirect(request.form.get('next', url_for('index'))))
+    #NOTA TÉCNICA (Joshua): Persistencia estética del tema mediante cookies locales.
+    #Evita consultas redundantes a la base de datos SQLite y expira estrictamente en 30 días.
+    #response.set_cookie('theme', theme, max_age=30*24*60*60)
+
     resp.set_cookie('modo_claro', 'true' if modo == 'claro' else 'false', max_age=30*24*60*60)  # cookie por 30 dias
     return resp
 
