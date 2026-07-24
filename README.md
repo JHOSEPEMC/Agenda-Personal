@@ -6,15 +6,6 @@ Este proyecto es una aplicación web desarrollada con Flask diseñada para la re
 
 ## 🛠️ GUÍA PARA DESARROLLADORES (Backend & Arquitectura)
 
-### 4. Ecosistema de Dependencias (`requirements.txt`)
-El backend se apoya en un conjunto de librerías de Python administradas a través de `pip` para garantizar el correcto funcionamiento del ecosistema:
-
-*   **`Flask==3.1.2` & `Werkzeug==3.1.4`:** Framework principal del servidor web y su motor de utilidades WSGI encargado del enrutamiento y la seguridad de las cookies.
-*   **`Flask-SQLAlchemy==3.1.1` & `SQLAlchemy==2.0.45`:** El ORM encargado de traducir las consultas de Python directamente a sentencias SQL en la base de datos SQLite.
-*   **`psycopg2-binary==2.9.11`:** Conector precompilado listo para entornos de producción, lo que permite al sistema migrar de manera transparente de SQLite a una base de datos **PostgreSQL**.
-*   **`Flask-Mail==0.10.0`:** Componente encargado de establecer los canales SMTP seguros con los servidores de Google para el envío de los códigos de validación de 6 dígitos.
-*   **`python-dotenv==1.2.1`:** Librería que inyecta las credenciales locales guardadas en el archivo `.env` al objeto `os.environ` del sistema para evitar filtraciones de seguridad.
-
 Esta sección detalla los componentes lógicos desarrollados en el Backend del sistema para su correcto despliegue, mantenimiento y extensión por parte del equipo de ingeniería.
 
 ### 1. Arquitectura de Datos y Modelos (`models.py`)
@@ -45,6 +36,15 @@ El servidor Flask expone los siguientes endpoints esenciales controlados por mé
 *   **Seguridad de Credenciales:** Encriptación robusta utilizando la librería `werkzeug.security` mediante algoritmos de hashing seguros (`generate_password_hash` y `check_password_hash`). La base de datos nunca almacena texto plano.
 *   **Seguridad de Sesiones:** Inyección de decoradores basados en `functools.wraps` para validar la existencia de `user_id` en las cookies del cliente antes de resolver las peticiones a vistas privadas.
 *   **Aislamiento del Entorno:** Dependencia estricta de una clave secreta (`SECRET_KEY`) aleatoria inyectada dinámicamente desde el entorno (`os.environ`), mitigando ataques de secuestro de sesión (Session Hijacking).
+
+### 4. Ecosistema de Dependencias (`requirements.txt`)
+El backend se apoya en un conjunto de librerías de Python administradas a través de `pip` para garantizar el correcto funcionamiento del ecosistema:
+
+*   **`Flask==3.1.2` & `Werkzeug==3.1.4`:** Framework principal del servidor web y su motor de utilidades WSGI encargado del enrutamiento y la seguridad de las cookies.
+*   **`Flask-SQLAlchemy==3.1.1` & `SQLAlchemy==2.0.45`:** El ORM encargado de traducir las consultas de Python directamente a sentencias SQL en la base de datos SQLite.
+*   **`psycopg2-binary==2.9.11`:** Conector precompilado listo para entornos de producción, lo que permite al sistema migrar de manera transparente de SQLite a una base de datos **PostgreSQL**.
+*   **`Flask-Mail==0.10.0`:** Componente encargado de establecer los canales SMTP seguros con los servidores de Google para el envío de los códigos de validación de 6 dígitos.
+*   **`python-dotenv==1.2.1`:** Librería que inyecta las credenciales locales guardadas en el archivo `.env` al objeto `os.environ` del sistema para evitar filtraciones de seguridad.
 
 ---
 
