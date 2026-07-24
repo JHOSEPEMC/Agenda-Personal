@@ -40,3 +40,12 @@ Esta es la interfaz gráfica que verá el usuario al interactuar con el sistema 
 ![Interfaz de Registro de la Agenda] igualmente colocar fotoprueba ejemplo:
 (capturas/diagramas/Captura de pantalla (2).png)
 
+## SOLUCIÓN DE PROBLEMAS COMUNES (Troubleshooting)
+
+### Error: `KeyError: 'SECRET_KEY'` o fallo al arrancar el servidor
+*   **Causa:** El backend no encuentra el archivo de variables ocultas `.env` en la raíz.
+*   **Solución:** Asegurarse de renombrar el archivo a `.env` a secas (sin extensiones como `.txt` o `.example`) y verificar que la línea `SECRET_KEY=...` esté correctamente declarada.
+
+### Error de compilación con `psycopg2` en Windows
+*   **Causa:** Se está intentando instalar dependencias heredadas en entornos con versiones de Python demasiado recientes (como 3.12 o superiores) donde no existen instaladores precompilados.
+*   **Solución:** Desplegar el entorno virtual utilizando de forma estricta **Python 3.11**, el cual cuenta con compatibilidad directa de binarios (`.whl`) optimizados para sistemas Windows.
