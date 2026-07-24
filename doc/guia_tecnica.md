@@ -1,4 +1,4 @@
-# 🛠️ GUÍA PARA DESARROLLADORES - BACKEND (`doc/`)
+# GUÍA PARA DESARROLLADORES - BACKEND (`doc/`)
 
 Este documento contiene la especificación técnica del lado del servidor para los desarrolladores del proyecto de la Agenda Personal (IESTPO).
 
@@ -26,7 +26,7 @@ Colocar imagen relacionada a esto
 
 ---
 
-## 🚀 MANUAL DE USO CORTO (Guía de Usuario)
+## MANUAL DE USO CORTO (Guía de Usuario)
 
 1. **Crear Cuenta:** Regístrate con tus datos personales, DNI y un correo electrónico válido en la interfaz de registro.
 2. **Validar Código:** Copia el código de 6 dígitos enviado automáticamente a tu correo y digítalo en el portal para activar tu usuario.
