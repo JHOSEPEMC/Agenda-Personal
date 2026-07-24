@@ -14,6 +14,12 @@ El backend gestiona la persistencia mediante **SQLite** y el ORM **SQLAlchemy**,
 - **`/dashboard` [GET]:** Vista privada protegida mediante el decorador `@login_required` para impedir ingresos anónimos al entorno de la agenda.
 - **`/cambiar-tema` [POST]:** Inyecta cookies locales por 30 días para persistir la preferencia de Modo Claro o Modo Oscuro del usuario.
 
+### Vista del Entorno de Desarrollo
+A continuación se muestra el servidor de desarrollo corriendo localmente en la rama de documentación:
+
+Colocar imagen relacionada a esto
+
+
 ## 3. Capa de Seguridad
 - **Cifrado:** Uso estricto de `werkzeug.security` para el hashing de contraseñas (`generate_password_hash` y `check_password_hash`).
 - **Aislamiento:** Uso de claves secretas (`SECRET_KEY`) cargadas dinámicamente desde variables de entorno locales (`.env`).
@@ -27,3 +33,10 @@ El backend gestiona la persistencia mediante **SQLite** y el ORM **SQLAlchemy**,
 3. **Iniciar Sesión:** Introduce tus credenciales validadas en la pantalla de Login.
 4. **Alternar Tema:** Utiliza el botón del menú superior para cambiar instantáneamente la estética entre Modo Claro y Modo Oscuro.
 5. **Gestionar Agenda:** Accede a tu panel privado (Dashboard) para administrar de forma segura tus actividades e interacciones personales.
+
+### Vista de la Interfaz de la Agenda (Registro)
+Esta es la interfaz gráfica que verá el usuario al interactuar con el sistema del Instituto:
+
+![Interfaz de Registro de la Agenda] igualmente colocar fotoprueba ejemplo:
+(capturas/diagramas/Captura de pantalla (2).png)
+
