@@ -6,3 +6,4 @@ uploads/
 .env
 /venv
 .crear_admin.py
+/logs
