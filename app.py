@@ -161,7 +161,7 @@ def obtener_anotacion_por_id(anotacion_id):
 def obtener_anotacion_por_fecha(usuario_id, fecha):
     return Agenda.query.filter_by(usuario_id=usuario_id, fecha=fecha).first()
 
-def crear_anotacion(usuario_id, fecha, texto):
+def db_crear_anotacion(usuario_id, fecha, texto):
     nueva = Agenda(usuario_id=usuario_id, fecha=fecha, anotacion=texto)
     db.session.add(nueva)
     db.session.commit()
@@ -174,7 +174,7 @@ def actualizar_anotacion(anotacion, fecha, texto):
     db.session.commit()
     return anotacion
 
-def eliminar_anotacion(anotacion):
+def db_eliminar_anotacion(anotacion):
     db.session.delete(anotacion)
     db.session.commit()
 
@@ -529,7 +529,7 @@ def crear_anotacion():
                 return redirect(url_for('editar_anotacion', id=existente.id))
             
             with transaccion():
-                crear_anotacion(usuario_id, fecha, anotacion)
+                db_crear_anotacion(usuario_id, fecha, anotacion)
             
             flash('Anotación creada', 'success')
             return redirect(url_for('ver_agenda'))
@@ -600,7 +600,7 @@ def eliminar_anotacion(id):
             return redirect(url_for('ver_agenda'))
         
         with transaccion():
-            eliminar_anotacion(anotacion)
+            db_eliminar_anotacion(anotacion)
         
         flash('Anotación eliminada', 'success')
         
