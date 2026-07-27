@@ -211,10 +211,19 @@ def validar_registro(nombre_usuario, correo, password, password_confirm):
     if not resultado.exito:
         return resultado
     
-    if verificar_duplicados(Usuario, email=correo):
+    # Eliminar cualquier usuario previo no verificado con ese correo o usuario
+    fantasmas = Usuario.query.filter(
+        ((Usuario.email == correo) | (Usuario.nombre_usuario == nombre_usuario)) & (Usuario.verificado == False)
+    ).all()
+    for f in fantasmas:
+        db.session.delete(f)
+    if fantasmas:
+        db.session.commit()
+    
+    if verificar_duplicados(Usuario, email=correo, verificado=True):
         return Resultado(False, "Este correo ya está registrado", None)
     
-    if verificar_duplicados(Usuario, nombre_usuario=nombre_usuario):
+    if verificar_duplicados(Usuario, nombre_usuario=nombre_usuario, verificado=True):
         return Resultado(False, "Este nombre de usuario ya está en uso", None)
     
     return Resultado(True, "", None)
@@ -265,36 +274,32 @@ def registrar():
         return redirect(url_for('register_view'))
     
     try:
-        with transaccion():
-            nuevo_usuario = Usuario(
-                nombre_usuario=nombre_usuario,
-                email=correo,
-                password_hash=generate_password_hash(password),
-                verificado=False
-            )
-            db.session.add(nuevo_usuario)
-            db.session.flush()
-            
-            agenda_inicial = Agenda(
-                usuario_id=nuevo_usuario.id,
-                fecha=datetime.now().date(),
-                anotacion="¡Bienvenido a tu agenda personal!"
-            )
-            db.session.add(agenda_inicial)
-            
-            codigo = str(random.randint(100000, 999999))
-            session.update({'correo_verificar': correo, 'codigo_verificacion': codigo})
-            
-            resultado_email = enviar_email_verificacion(correo, nombre_usuario, codigo)
-            if not resultado_email.exito:
-                flash('No se pudo enviar el correo de verificación', 'warning')
+        codigo = str(random.randint(100000, 999999))
+        session['registro_pendiente'] = {
+            'nombre_usuario': nombre_usuario,
+            'email': correo,
+            'password_hash': generate_password_hash(password)
+        }
+        session['correo_verificar'] = correo
+        session['codigo_verificacion'] = codigo
         
-        log_seguridad('REGISTRO_EXITOSO', f'Usuario: {nombre_usuario}, Email: {correo}')
-        flash(f'Registro exitoso. Código enviado a {correo}', 'success')
+        resultado_email = enviar_email_verificacion(correo, nombre_usuario, codigo)
+        if not resultado_email.exito:
+            session.pop('registro_pendiente', None)
+            session.pop('correo_verificar', None)
+            session.pop('codigo_verificacion', None)
+            flash('No se pudo enviar el correo de verificación', 'error')
+            return redirect(url_for('register_view'))
+        
+        log_seguridad('REGISTRO_INICIADO', f'Usuario: {nombre_usuario}, Email: {correo}')
+        flash(f'Código de verificación enviado a {correo}', 'success')
         return redirect(url_for('verify'))
         
     except Exception as e:
         log_error('REGISTRO_USUARIO', e)
+        session.pop('registro_pendiente', None)
+        session.pop('correo_verificar', None)
+        session.pop('codigo_verificacion', None)
         flash('Error en el registro', 'error')
         return redirect(url_for('register_view'))
 
@@ -306,22 +311,50 @@ def verify():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
-        codigo_ingresado = request.form.get('codigo', '')
+        codigo_ingresado = request.form.get('codigo', '').strip()
         codigo_guardado = session.get('codigo_verificacion')
         correo = session.get('correo_verificar')
+        datos_reg = session.get('registro_pendiente')
         
-        resultado = verificar_codigo_verificacion(codigo_ingresado, codigo_guardado, correo)
+        if not codigo_ingresado or codigo_ingresado != codigo_guardado:
+            flash('Código incorrecto', 'error')
+            return render_template('verify.html')
         
-        if resultado.exito:
+        try:
+            with transaccion():
+                if datos_reg:
+                    nuevo_usuario = Usuario(
+                        nombre_usuario=datos_reg['nombre_usuario'],
+                        email=datos_reg['email'],
+                        password_hash=datos_reg['password_hash'],
+                        verificado=True
+                    )
+                    db.session.add(nuevo_usuario)
+                    db.session.flush()
+                    
+                    agenda_inicial = Agenda(
+                        usuario_id=nuevo_usuario.id,
+                        fecha=datetime.now().date(),
+                        anotacion="¡Bienvenido a tu agenda personal!"
+                    )
+                    db.session.add(agenda_inicial)
+                else:
+                    usuario = Usuario.query.filter_by(email=correo).first()
+                    if usuario:
+                        usuario.verificado = True
+            
+            session.pop('registro_pendiente', None)
             session.pop('correo_verificar', None)
             session.pop('codigo_verificacion', None)
-            flash(resultado.mensaje, 'success')
+            
+            flash('Correo verificado exitosamente. Ya puedes iniciar sesión.', 'success')
             log_seguridad('VERIFICACION_EXITOSA', f'Email: {correo}')
             return redirect(url_for('login'))
-        else:
-            flash(resultado.mensaje, 'error')
-            if resultado.mensaje == "Usuario no encontrado":
-                return redirect(url_for('login'))
+            
+        except Exception as e:
+            log_error('VERIFICACION_CODIGO', e)
+            flash('Error al verificar el código', 'error')
+            return render_template('verify.html')
     
     return render_template('verify.html')
 
@@ -329,27 +362,27 @@ def verify():
 @log_request
 def reenviar_codigo():
     correo = session.get('correo_verificar')
+    datos_reg = session.get('registro_pendiente')
+    
     if not correo:
         flash('No hay proceso de verificación activo', 'error')
         return redirect(url_for('login'))
     
-    usuario = Usuario.query.filter_by(email=correo).first()
-    if not usuario:
-        flash('Usuario no encontrado', 'error')
-        return redirect(url_for('login'))
+    nombre_usuario = datos_reg['nombre_usuario'] if datos_reg else correo
+    if not datos_reg:
+        usuario = Usuario.query.filter_by(email=correo).first()
+        if usuario:
+            if usuario.verificado:
+                flash('El usuario ya está verificado', 'info')
+                session.pop('correo_verificar', None)
+                session.pop('codigo_verificacion', None)
+                return redirect(url_for('login'))
+            nombre_usuario = usuario.nombre_usuario
     
-    if usuario.verificado:
-        flash('El usuario ya está verificado', 'info')
-        session.pop('correo_verificar', None)
-        session.pop('codigo_verificacion', None)
-        return redirect(url_for('login'))
-    
-    # Generar nuevo código
     codigo = str(random.randint(100000, 999999))
     session['codigo_verificacion'] = codigo
     
-    # Enviar nuevo email
-    resultado = enviar_email_verificacion(correo, usuario.nombre_usuario, codigo)
+    resultado = enviar_email_verificacion(correo, nombre_usuario, codigo)
     if resultado.exito:
         flash('Nuevo código enviado a tu correo', 'success')
     else:
@@ -391,7 +424,11 @@ def login():
             
             if not usuario.verificado:
                 log_seguridad('LOGIN_FALLIDO', f'Usuario no verificado - Email: {correo}')
-                flash('Debes verificar tu correo primero', 'error')
+                session['correo_verificar'] = correo
+                codigo = str(random.randint(100000, 999999))
+                session['codigo_verificacion'] = codigo
+                enviar_email_verificacion(correo, usuario.nombre_usuario, codigo)
+                flash('Debes verificar tu correo primero. Te hemos enviado un nuevo código.', 'warning')
                 return redirect(url_for('verify'))
             
             session.update({
