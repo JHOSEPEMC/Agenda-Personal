@@ -3,7 +3,7 @@
 {% block content %}
 <div class="user-dashboard" style="max-width: 600px; margin: 40px auto;">
     <div class="tarjeta-admin" style="text-align: center; padding: 40px 20px;">
-        <h2 style="color: var(--accent-color); margin-bottom: 20px;">¡Bienvenido, {{ postulante.nombres }} {{ postulante.apellidos }}!</h2>
+        <h2 style="color: var(--accent-color); margin-bottom: 20px;">¡Bienvenido, {{ session.nombre_usuario }}!</h2>
         <p style="font-size: 1.1em; margin-bottom: 30px; color: var(--text-secondary);">Has iniciado sesión de manera correcta en el sistema.</p>
         <div style="display: flex; justify-content: center; gap: 15px;">
             <a href="{{ url_for('logout') }}" class="btn" style="background: var(--accent-color); color: var(--bg-color);">Cerrar Sesión</a>

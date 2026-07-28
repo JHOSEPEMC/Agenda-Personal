@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Web de Admisión{% endblock %}</title>
+    <title>{% block title %}Agenda Personal{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
@@ -67,7 +67,7 @@
             <div class="all-container">
                 {% if session.user_id %}
                 <header>
-                    <h1>Admisión de postulantes IESTPO</h1>
+                    <h1>Agenda Personal</h1>
                     {% block nav %}
                     <nav class="navegacion">
                         <a class="link link-d" href="{{ url_for('ver_agenda') }}">Mi Agenda</a>
@@ -94,14 +94,14 @@
                         <div class="info-section">
                             <p><strong>Usuario:</strong>
                                 {% if session.user_id %}
-                                {{ session.email }} (Postulante)
+                                {{ session.email }}
                                 {% else %}
                                 No autenticado
                                 {% endif %}
                             </p>
                         </div>
                         <div class="copyright-section">
-                            <p>&copy; 2025 - Web de admisión IESTPO</p>
+                            <p>&copy; 2026 - Agenda Personal</p>
                         </div>
                     </div>
                 </footer>
