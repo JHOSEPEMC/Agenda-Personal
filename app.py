@@ -469,15 +469,37 @@ def ver_agenda():
         # Obtener parámetros de filtro
         mes = request.args.get('mes', type=int)
         año = request.args.get('año', type=int)
+        filtro = request.args.get('filtro', '').strip()
+        q = request.args.get('q', '').strip()
         page = request.args.get('page', 1, type=int)
         
+        query = Agenda.query.filter_by(usuario_id=usuario_id)
+        
+        # Filtro 1: Mes y Año
         if mes and año:
-            # Filtrar por mes/año
-            anotaciones = obtener_anotaciones_por_mes(usuario_id, mes, año)
+            query = query.filter(extract('month', Agenda.fecha) == mes)\
+                         .filter(extract('year', Agenda.fecha) == año)
+        
+        # Filtro 2: Período temporal (hoy, futuras, pasadas)
+        hoy = datetime.now().date()
+        if filtro == 'hoy':
+            query = query.filter(Agenda.fecha == hoy)
+        elif filtro == 'futuras':
+            query = query.filter(Agenda.fecha > hoy)
+        elif filtro == 'pasadas':
+            query = query.filter(Agenda.fecha < hoy)
+            
+        # Filtro 3: Búsqueda por palabra clave
+        if q:
+            query = query.filter(Agenda.anotacion.ilike(f'%{q}%'))
+            
+        query = query.order_by(Agenda.fecha.desc())
+        
+        if mes or filtro or q:
+            anotaciones = query.all()
             pagination = None
         else:
-            # Paginación normal
-            pagination = obtener_anotaciones_paginadas(usuario_id, page)
+            pagination = query.paginate(page=page, per_page=ANOTACIONES_POR_PAGINA, error_out=False)
             anotaciones = pagination.items
         
         # Obtener meses disponibles para el filtro
@@ -493,6 +515,8 @@ def ver_agenda():
                              pagination=pagination,
                              mes_actual=mes,
                              año_actual=año,
+                             filtro_actual=filtro,
+                             q_actual=q,
                              meses_disponibles=meses_disponibles)
     except Exception as e:
         log_error('VER_AGENDA', e)
