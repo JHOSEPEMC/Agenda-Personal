@@ -518,10 +518,6 @@ def crear_anotacion():
         try:
             fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
             
-            # Validar que no sea fecha futura
-            if fecha > datetime.now().date():
-                flash('No puedes crear anotaciones en el futuro', 'error')
-                return render_template('agenda_crear.html')
             
             existente = obtener_anotacion_por_fecha(usuario_id, fecha)
             if existente:
@@ -566,10 +562,6 @@ def editar_anotacion(id):
             try:
                 fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
                 
-                # Validar que no sea fecha futura
-                if fecha > datetime.now().date():
-                    flash('No puedes poner una fecha futura', 'error')
-                    return render_template('agenda_editar.html', anotacion=anotacion)
                 
                 with transaccion():
                     actualizar_anotacion(anotacion, fecha, nuevo_texto)
