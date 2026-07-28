@@ -16,24 +16,51 @@
         </a>
     </div>
 
-    <!-- Filtro por Mes/Año -->
+    <!-- Filtros de Anotaciones -->
     <div class="tarjeta-admin" style="padding: 15px 20px; margin-bottom: 25px;">
         <form method="GET" action="{{ url_for('ver_agenda') }}" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <label style="font-weight: bold; margin: 0;">Filtrar por mes:</label>
-            <select name="filtro_mes" class="form-control" style="max-width: 280px; padding: 8px 12px;" onchange="if(this.value){ window.location.href=this.value; }">
-                <option value="{{ url_for('ver_agenda') }}">-- Todas las anotaciones --</option>
-                {% for item in meses_disponibles %}
-                    {% set m = item.mes | int %}
-                    {% set a = item.año | int %}
-                    <option value="{{ url_for('ver_agenda', mes=m, año=a) }}" {% if mes_actual == m and año_actual == a %}selected{% endif %}>
-                        {{ m }}/{{ a }}
-                    </option>
-                {% endfor %}
-            </select>
+            <!-- Filtro 1: Mes y Año -->
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <label style="font-weight: bold; margin: 0;">Mes:</label>
+                <select class="form-control" style="padding: 8px 12px; min-width: 140px;" onchange="if(this.value){ window.location.href=this.value; }">
+                    <option value="{{ url_for('ver_agenda', filtro=filtro_actual, q=q_actual) }}">-- Todos los meses --</option>
+                    {% for item in meses_disponibles %}
+                        {% set m = item.mes | int %}
+                        {% set a = item.año | int %}
+                        <option value="{{ url_for('ver_agenda', mes=m, año=a, filtro=filtro_actual, q=q_actual) }}" {% if mes_actual == m and año_actual == a %}selected{% endif %}>
+                            {{ m }}/{{ a }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            {% if mes_actual and año_actual %}
-                <a href="{{ url_for('ver_agenda') }}" style="color: #e74c3c; text-decoration: none; font-size: 0.9em;">
-                    ✕ Limpiar filtro
+            <!-- Filtro 2: Período Temporal -->
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <label style="font-weight: bold; margin: 0;">Período:</label>
+                <select class="form-control" style="padding: 8px 12px; min-width: 140px;" onchange="if(this.value){ window.location.href=this.value; }">
+                    <option value="{{ url_for('ver_agenda', mes=mes_actual, año=año_actual, q=q_actual) }}">-- Todo el tiempo --</option>
+                    <option value="{{ url_for('ver_agenda', filtro='hoy', mes=mes_actual, año=año_actual, q=q_actual) }}" {% if filtro_actual == 'hoy' %}selected{% endif %}>Hoy</option>
+                    <option value="{{ url_for('ver_agenda', filtro='futuras', mes=mes_actual, año=año_actual, q=q_actual) }}" {% if filtro_actual == 'futuras' %}selected{% endif %}>Próximas (Futuras)</option>
+                    <option value="{{ url_for('ver_agenda', filtro='pasadas', mes=mes_actual, año=año_actual, q=q_actual) }}" {% if filtro_actual == 'pasadas' %}selected{% endif %}>Pasadas</option>
+                </select>
+            </div>
+
+            <!-- Filtro 3: Búsqueda por Texto -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                {% if mes_actual %}
+                    <input type="hidden" name="mes" value="{{ mes_actual }}">
+                    <input type="hidden" name="año" value="{{ año_actual }}">
+                {% endif %}
+                {% if filtro_actual %}
+                    <input type="hidden" name="filtro" value="{{ filtro_actual }}">
+                {% endif %}
+                <input type="text" name="q" value="{{ q_actual or '' }}" placeholder="Buscar texto..." class="form-control" style="padding: 8px 12px; width: 170px;">
+                <button type="submit" class="btn" style="padding: 8px 14px; font-size: 0.9em;">Buscar</button>
+            </div>
+
+            {% if mes_actual or filtro_actual or q_actual %}
+                <a href="{{ url_for('ver_agenda') }}" style="color: #e74c3c; text-decoration: none; font-size: 0.9em; margin-left: auto;">
+                    ✕ Limpiar filtros
                 </a>
             {% endif %}
         </form>
