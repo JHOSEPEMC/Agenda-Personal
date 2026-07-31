@@ -1,68 +1,55 @@
 # Sistema de Agenda Personal e Interacción Multiusuario (Flask)
 
-Este proyecto es una aplicación web desarrollada con **Flask** diseñada para la gestión de una agenda personal. Implementa funcionalidades completas de autenticación, control de sesiones privadas y adaptabilidad visual para los usuarios del Instituto de Educación Superior Tecnológico Público Oxapampa.
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.1.2-000000?style=for-the-badge&logo=flask&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=for-the-badge&logo=sqlite&logoColor=white)
+![Licencia](https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge)
+
+Aplicación web desarrollada en Flask para la gestión de agendas personales y colaboración multiusuario. Ofrece registro seguro con verificación por correo electrónico (OTP), aislamiento de notas por usuario, filtros por fecha y personalización de temas (Claro/Oscuro).
 
 ---
 
-## DOCUMENTACIÓN DEL PROYECTO
-
-Toda la documentación detallada del sistema ha sido organizada de forma modular. Puedes acceder a las guías completas haciendo clic en los siguientes enlaces dentro del repositorio:
-
-*   **[Guía Completa para Desarrolladores (Backend & Arquitectura)]:** Contiene la especificación de los modelos de base de datos (`models.py`), la lógica de las rutas de Flask (`app.py`), los mecanismos de seguridad y el ecosistema de dependencias.
-*   **[Manual de Uso Corto para el Usuario]:** Pasos rápidos para registrarse, verificar la cuenta por correo electrónico y alternar entre los modos visuales de la agenda.
-
----
-
-## INSTALACIÓN Y CONFIGURACIÓN RÁPIDA
-
-1. **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/JHOSEPEMC/Agenda-Personal.git
-   cd Agenda-Personal
-   ```
-2. **Crear y activar el entorno virtual:**
-   ```bash
-   # Windows
-   python -m venv venv
-   venv\Scripts\activate
-   ```
-3. **Instalar dependencias:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configurar Variables de Entorno (.env):**
-    Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
-
-    ```ini
-    # Seguridad de Flask
-    SECRET_KEY=tu_clave_secreta_super_segura
-
-    # Configuración de Correo (Gmail)
-    MAIL_SERVER=smtp.gmail.com
-    MAIL_PORT=587
-    MAIL_USE_TLS=True
-    MAIL_USERNAME=tucorreo@gmail.com
-    MAIL_PASSWORD=tu_contraseña_de_app
-    MAIL_DEFAULT_SENDER=tucorreo@gmail.com
-
-    # Configuración de Cloudinary (Opcional, si no se pone usa almacenamiento local)
-    CLOUDINARY_CLOUD_NAME=cloudinary_cloud_name
-    CLOUDINARY_API_KEY=tu_api_key
-    CLOUDINARY_API_SECRET=tu_api_secret
-
-    ```
-
-5. **Ejecutar el Servidor:**
-   ```bash
-   python app.py
-   ```
-   La aplicación estará lista en: `http://127.0.0.1:5000`.
+## Tabla de Contenidos
+- [Características Principales](#características-principales)
+- [Tecnologías Utilizadas](#tecnologías-utilizadas)
+- [Arquitectura de Base de Datos](#arquitectura-de-base-de-datos)
+- [Rutas y Endpoints](#rutas-y-endpoints)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Configuración y Variables de Entorno](#configuración-y-variables-de-entorno)
+- [Guía de Instalación](#guía-de-instalación)
+- [Manual de Uso](#manual-de-uso)
+- [Capturas de Pantalla](#capturas-de-pantalla)
+- [Solución de Problemas](#solución-de-problemas)
+- [Autores](#autores)
 
 ---
 
-## Autores
-*   **KalebCxDev** - *Frontend*
-*   **joshuanavarrovelasquez-desig** - *Backend*
-*   **JHOSEPEMC** - *Base de datos*
+## Características Principales
 
-© 2026 Sistema De Agenda Personal IESTPO
+1. **Autenticación y Seguridad:**
+   - Registro con validación de contraseña y verificación mediante código OTP de 6 dígitos enviado por Flask-Mail.
+   - Protección contra fuerza bruta con límite de intentos (Rate Limiting).
+   - Contraseñas encriptadas mediante Werkzeug.
+
+2. **Gestión de Agenda (CRUD):**
+   - Crear, editar, listar y eliminar notas organizadas por fecha.
+   - Control para evitar notas duplicadas en un mismo día por usuario.
+
+3. **Filtros y Búsqueda:**
+   - Filtro por mes, año y períodos (Hoy, Futuras, Pasadas).
+   - Búsqueda por palabras clave y paginación de 10 elementos.
+
+4. **Personalización:**
+   - Alternancia entre Modo Claro y Oscuro guardado en cookies.
+
+---
+
+## Tecnologías Utilizadas
+
+- **Lenguaje:** Python 3.11
+- **Framework:** Flask 3.1.2
+- **Base de Datos / ORM:** SQLite / Flask-SQLAlchemy 3.1.1
+- **Seguridad:** Werkzeug 3.1.4
+- **Envío de Correos:** Flask-Mail 0.10.0
+- **Servidor Producción:** Gunicorn 23.0.0
+- **Frontend:** HTML5, CSS3, JavaScript
