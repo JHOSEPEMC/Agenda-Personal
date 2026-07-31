@@ -151,3 +151,61 @@ FLASK_DEBUG=False
 ```
 
 > Nota: El archivo `.env` no debe subirse al repositorio por razones de seguridad.
+
+---
+
+## Guía de Instalación y Ejecución
+
+### Prerrequisitos
+- Python 3.11 o superior.
+- Git.
+- Cuenta de correo para envío de códigos OTP.
+
+### Pasos
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/JHOSEPEMC/Agenda-Personal.git
+   cd Agenda-Personal
+   ```
+
+2. **Crear y activar el entorno virtual:**
+   - En Windows:
+     ```bash
+     python -m venv venv
+     venv\Scripts\activate
+     ```
+   - En Linux / macOS:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+
+3. **Instalar dependencias:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configurar `.env`:**
+   Crea el archivo `.env` según la sección de variables de entorno.
+
+5. **Ejecutar en desarrollo:**
+   ```bash
+   python app.py
+   ```
+   Accede a `http://127.0.0.1:5000` en tu navegador.
+
+6. **Ejecutar en producción:**
+   ```bash
+   gunicorn app:app --bind 0.0.0.0:5000
+   ```
+
+---
+
+## Manual de Uso
+
+1. **Registro:** Ingresa a `/registrarse`, completa los datos requeridos y envía el formulario.
+2. **Verificación:** Revisa tu correo, copia el código OTP de 6 dígitos e ingrésalo en `/verify`.
+3. **Inicio de Sesión:** Inicia sesión con tus credenciales en `/login`.
+4. **Uso de Agenda:** Desde el panel principal puedes crear, editar, buscar y eliminar anotaciones organizadas por fecha.
+5. **Cambiar Tema:** Alterna la interfaz entre Modo Claro y Modo Oscuro usando el botón de la barra superior.
