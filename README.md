@@ -102,3 +102,52 @@ erDiagram
 | `/agenda/editar/<id>` | GET, POST | Sí | Modifica anotación existente. |
 | `/agenda/eliminar/<id>` | POST | Sí | Elimina anotación. |
 | `/cambiar-tema` | POST | No | Cambia preferencia de tema claro/oscuro. |
+
+---
+
+## Estructura del Proyecto
+
+```text
+Agenda-Personal/
+├── app.py                  # Aplicación principal Flask (Rutas y lógica)
+├── models.py               # Modelos SQLAlchemy (Usuario, Agenda)
+├── config_mail.py          # Configuración de Flask-Mail
+├── requirements.txt        # Dependencias de Python
+├── Procfile                # Archivo de despliegue para servidor WSGI
+├── .env                    # Variables de entorno locales
+├── doc/                    # Documentación y recursos gráficos
+│   └── capturas/           # Capturas de la interfaz gráfica
+├── instance/               # Base de datos SQLite local (app.db)
+├── logs/                   # Archivos de log del sistema (app.log)
+└── templates/              # Plantillas Jinja2 HTML
+```
+
+---
+
+## Configuración y Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto basándote en el siguiente formato:
+
+```ini
+# Clave secreta de Flask
+SECRET_KEY=tu_clave_secreta_super_segura
+
+# Configuración de Correo (Gmail SMTP)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USERNAME=tucorreo@gmail.com
+MAIL_PASSWORD=tu_contraseña_de_aplicacion
+MAIL_DEFAULT_SENDER=tucorreo@gmail.com
+
+# Configuración de Cloudinary (Opcional)
+CLOUDINARY_CLOUD_NAME=cloudinary_cloud_name
+CLOUDINARY_API_KEY=tu_api_key
+CLOUDINARY_API_SECRET=tu_api_secret
+
+# Puerto y Depuración (Opcional)
+PORT=5000
+FLASK_DEBUG=False
+```
+
+> Nota: El archivo `.env` no debe subirse al repositorio por razones de seguridad.
