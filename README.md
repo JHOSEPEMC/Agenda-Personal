@@ -209,3 +209,43 @@ FLASK_DEBUG=False
 3. **Inicio de Sesión:** Inicia sesión con tus credenciales en `/login`.
 4. **Uso de Agenda:** Desde el panel principal puedes crear, editar, buscar y eliminar anotaciones organizadas por fecha.
 5. **Cambiar Tema:** Alterna la interfaz entre Modo Claro y Modo Oscuro usando el botón de la barra superior.
+
+---
+
+## Capturas de Pantalla
+
+| Vista | Captura |
+| :--- | :--- |
+| Registro de Usuario | ![Registro](doc/capturas/Captura%20de%20pantalla%20(2).png) |
+| Dashboard de Agenda | ![Agenda](doc/capturas/Captura%20de%20pantalla%20(3).png) |
+| Edición de Anotaciones | ![Edición](doc/capturas/Captura%20de%20pantalla%20(4).png) |
+| Verificación OTP | ![Verificación](doc/capturas/Captura%20de%20pantalla%20(5).png) |
+| Ajustes e Interfaz | ![Ajustes](doc/capturas/Captura%20de%20pantalla%20(6).png) |
+
+---
+
+## Solución de Problemas
+
+1. **Error KeyError: 'SECRET_KEY':**
+   - Causa: Falta el archivo `.env` o la variable no está configurada.
+   - Solución: Crea el archivo `.env` en la raíz y define `SECRET_KEY=tu_clave`.
+
+2. **Error SMTPAuthenticationError al enviar correo:**
+   - Causa: Credenciales SMTP incorrectas o falta Contraseña de Aplicación en Gmail.
+   - Solución: Genera una Contraseña de Aplicación de 16 caracteres en la cuenta de Google y colócala en `MAIL_PASSWORD`.
+
+3. **Error con psycopg2 en Windows:**
+   - Causa: Falta de binarios compatibles en versiones recientes de Python.
+   - Solución: Ejecutar en Python 3.11 que cuenta con `psycopg2-binary` precompilado.
+
+---
+
+## Autores
+
+Proyecto diseñado y desarrollado por:
+
+- **KalebCxDev** - Frontend e Interfaz de Usuario
+- **joshuanavarrovelasquez-desig** - Backend y Lógica de Aplicación
+- **JHOSEPEMC** - Base de Datos
+
+Copyright 2026 Sistema de Agenda Personal IESTPO. Todos los derechos reservados.
