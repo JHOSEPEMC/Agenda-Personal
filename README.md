@@ -1,19 +1,19 @@
-# 📔 Sistema de Agenda Personal e Interacción Multiusuario (Flask)
+# Sistema de Agenda Personal e Interacción Multiusuario (Flask)
 
 Este proyecto es una aplicación web desarrollada con **Flask** diseñada para la gestión de una agenda personal. Implementa funcionalidades completas de autenticación, control de sesiones privadas y adaptabilidad visual para los usuarios del Instituto de Educación Superior Tecnológico Público Oxapampa.
 
 ---
 
-## 🛠️ DOCUMENTACIÓN DEL PROYECTO
+## DOCUMENTACIÓN DEL PROYECTO
 
 Toda la documentación detallada del sistema ha sido organizada de forma modular. Puedes acceder a las guías completas haciendo clic en los siguientes enlaces dentro del repositorio:
 
-*   **[Guía Completa para Desarrolladores (Backend & Arquitectura)](doc/guia_tecnica.md):** Contiene la especificación de los modelos de base de datos (`models.py`), la lógica de las rutas de Flask (`app.py`), los mecanismos de seguridad y el ecosistema de dependencias.
-*   **[Manual de Uso Corto para el Usuario](doc/guia_tecnica.md#%F0%9F%9A%80-manual-de-uso-corto-gu%C3%ADa-de-usuario):** Pasos rápidos para registrarse, verificar la cuenta por correo electrónico y alternar entre los modos visuales de la agenda.
+*   **[Guía Completa para Desarrolladores (Backend & Arquitectura)]:** Contiene la especificación de los modelos de base de datos (`models.py`), la lógica de las rutas de Flask (`app.py`), los mecanismos de seguridad y el ecosistema de dependencias.
+*   **[Manual de Uso Corto para el Usuario]:** Pasos rápidos para registrarse, verificar la cuenta por correo electrónico y alternar entre los modos visuales de la agenda.
 
 ---
 
-## 🚀 INSTALACIÓN Y CONFIGURACIÓN RÁPIDA
+## INSTALACIÓN Y CONFIGURACIÓN RÁPIDA
 
 1. **Clonar el repositorio:**
    ```bash
@@ -39,7 +39,7 @@ Toda la documentación detallada del sistema ha sido organizada de forma modular
 
 ---
 
-## 👥 Autores
+## Autores
 *   **KalebCxDev** - *Frontend*
 *   **joshuanavarrovelasquez-desig** - *Backend*
 *   **JHOSEPEMC** - *Base de datos*
