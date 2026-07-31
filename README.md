@@ -17,8 +17,8 @@ Toda la documentación detallada del sistema ha sido organizada de forma modular
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone https://github.com
-   cd flask-login-system
+   git clone https://github.com/JHOSEPEMC/Agenda-Personal.git
+   cd Agenda-Personal
    ```
 2. **Crear y activar el entorno virtual:**
    ```bash
