@@ -30,7 +30,28 @@ Toda la documentación detallada del sistema ha sido organizada de forma modular
    ```bash
    pip install -r requirements.txt
    ```
-4. **Configurar Variables de Entorno (`.env`):** Crea un archivo `.env` en la raíz con tus credenciales secretas y del servidor de correos SMTP.
+4. **Configurar Variables de Entorno (.env):**
+    Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+
+    ```ini
+    # Seguridad de Flask
+    SECRET_KEY=tu_clave_secreta_super_segura
+
+    # Configuración de Correo (Gmail)
+    MAIL_SERVER=smtp.gmail.com
+    MAIL_PORT=587
+    MAIL_USE_TLS=True
+    MAIL_USERNAME=tucorreo@gmail.com
+    MAIL_PASSWORD=tu_contraseña_de_app
+    MAIL_DEFAULT_SENDER=tucorreo@gmail.com
+
+    # Configuración de Cloudinary (Opcional, si no se pone usa almacenamiento local)
+    CLOUDINARY_CLOUD_NAME=cloudinary_cloud_name
+    CLOUDINARY_API_KEY=tu_api_key
+    CLOUDINARY_API_SECRET=tu_api_secret
+
+    ```
+
 5. **Ejecutar el Servidor:**
    ```bash
    python app.py
